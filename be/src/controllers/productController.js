@@ -142,7 +142,12 @@ async function createProduct(req, res) {
     }
 
     // Retrieve created product
-    const product = await query.get('SELECT * FROM products WHERE id = ?', [productId]);
+    const product = await query.get(`
+      SELECT p.*, c.name as category_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.id = ?
+    `, [productId]);
     
     return res.status(201).json({
       success: true,
@@ -206,9 +211,24 @@ async function updateProduct(req, res) {
       }
     }
 
+    // Retrieve updated product
+    const product = await query.get(`
+      SELECT p.*, c.name as category_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.id = ?
+    `, [productId]);
+
+    // Fetch sizes and colors
+    const updatedSizes = await query.all('SELECT size_name FROM product_sizes WHERE product_id = ?', [productId]);
+    const updatedColors = await query.all('SELECT color_name FROM product_colors WHERE product_id = ?', [productId]);
+    product.sizes = updatedSizes.map(s => s.size_name);
+    product.colors = updatedColors.map(c => c.color_name);
+
     return res.status(200).json({
       success: true,
-      message: 'Product updated successfully'
+      message: 'Product updated successfully',
+      product
     });
   } catch (error) {
     console.error('Update product error:', error);

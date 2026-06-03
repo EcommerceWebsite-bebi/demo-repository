@@ -138,9 +138,9 @@ async function runTests() {
     });
     const cartAdd2Json = await cartAdd2Res.json();
     console.log('Cart after adding products:', JSON.stringify(cartAdd2Json.cart, null, 2));
-    // Expected total price: 19.99 * 2 + 14.99 * 1 = 54.97
-    if (cartAdd2Json.cart.total_price !== 54.97) {
-      throw new Error(`Expected cart total price 54.97 but got ${cartAdd2Json.cart.total_price}`);
+    // Expected total price: 500000 * 2 + 350000 * 1 = 1350000
+    if (cartAdd2Json.cart.total_price !== 1350000) {
+      throw new Error(`Expected cart total price 1350000 but got ${cartAdd2Json.cart.total_price}`);
     }
 
     // --- 7. Verify Product Stock Prior to Checkout ---

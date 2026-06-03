@@ -46,5 +46,6 @@ const orderUpload = upload.fields([
 ]);
 
 module.exports = {
+  upload,
   orderUpload
 };

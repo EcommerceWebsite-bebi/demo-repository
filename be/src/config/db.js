@@ -206,10 +206,19 @@ async function initializeDatabase() {
         size TEXT,
         color TEXT,
         custom_design_image TEXT,
+        custom_design_pdf TEXT,
         FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products(id)
       )
     `);
+
+    // Run migration alter query to add custom_design_pdf if it's missing in existing database
+    try {
+      await query.run('ALTER TABLE order_items ADD COLUMN custom_design_pdf TEXT');
+      console.log('Successfully added custom_design_pdf column to order_items via migration.');
+    } catch (e) {
+      // Column already exists, ignore error
+    }
 
     // reviews table
     await query.run(`
@@ -263,7 +272,7 @@ async function initializeDatabase() {
       const adminRole = await query.get("SELECT id FROM roles WHERE name = 'ADMIN'");
       const adminRoleId = adminRole ? adminRole.id : 2;
       const hashedPassword = await bcrypt.hash('123456', 10);
-      
+
       const adminResult = await query.run(`
         INSERT INTO users (username, email, password, role_id)
         VALUES (?, ?, ?, ?)
@@ -277,7 +286,7 @@ async function initializeDatabase() {
     const productsCount = await query.get('SELECT COUNT(*) as count FROM products');
     if (productsCount.count === 0) {
       console.log('Seeding sample products...');
-      
+
       // Get category IDs
       const catOversize = await query.get("SELECT id FROM categories WHERE name = 'Oversize'");
       const catBasic = await query.get("SELECT id FROM categories WHERE name = 'Basic'");
@@ -292,9 +301,9 @@ async function initializeDatabase() {
       `, [
         'Black Oversize T-Shirt',
         'Premium cotton oversize t-shirt',
-        19.99,
+        500000,
         100,
-        'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+        'https://luonvuituoi.co/cdn/shop/files/navytr_c_623a3b46-d18d-4e05-a76c-ea95c05a8e5b.png?v=1750393504',
         idOversize,
         1
       ]);
@@ -305,9 +314,9 @@ async function initializeDatabase() {
       `, [
         'White Basic T-Shirt',
         'Simple white basic shirt',
-        14.99,
+        350000,
         50,
-        'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+        'https://bizweb.dktcdn.net/100/446/974/products/ao-thun-mlb-new-era-heavy-cotton-new-york-yankees-black-13086578-1.jpg?v=1691318321487',
         idBasic,
         0
       ]);

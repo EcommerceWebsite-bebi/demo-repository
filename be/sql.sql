@@ -325,18 +325,18 @@ VALUES
 (
     'Black Oversize T-Shirt',
     'Premium cotton oversize t-shirt',
-    19.99,
+    500000,
     100,
-    'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+    'https://luonvuituoi.co/cdn/shop/files/navytr_c_623a3b46-d18d-4e05-a76c-ea95c05a8e5b.png?v=1750393504',
     1,
     1
 ),
 (
     'White Basic T-Shirt',
     'Simple white basic shirt',
-    14.99,
+    350000,
     50,
-    'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+    'https://bizweb.dktcdn.net/100/446/974/products/ao-thun-mlb-new-era-heavy-cotton-new-york-yankees-black-13086578-1.jpg?v=1691318321487',
     2,
     0
 );

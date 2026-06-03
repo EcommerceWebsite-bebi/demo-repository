@@ -1,4 +1,153 @@
 const { query } = require('../config/db');
+const PDFDocument = require('pdfkit');
+const cloudinary = require('cloudinary').v2;
+
+async function createDesignPDF(item, order, user) {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 40 });
+      const buffers = [];
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => {
+        const pdfData = Buffer.concat(buffers);
+        resolve(pdfData);
+      });
+
+      // Header Brand
+      doc.fillColor('#1E293B');
+      doc.fontSize(20).font('Helvetica-Bold').text('MOUSEEE CUSTOM SHIRT SPECIFICATION', { align: 'center' });
+      doc.fontSize(10).font('Helvetica').fillColor('#64748B').text('Custom Merchandise Production Sheet', { align: 'center' });
+      doc.moveDown(1.5);
+
+      // Info Table Section
+      const startY = doc.y;
+      doc.strokeColor('#CBD5E1').lineWidth(1).moveTo(40, startY).lineTo(555, startY).stroke();
+      doc.moveDown(1);
+
+      // Customer Section (Left)
+      doc.fillColor('#1E293B');
+      doc.fontSize(12).font('Helvetica-Bold').text('Customer Details', 40, startY + 15);
+      doc.moveDown(0.5);
+      doc.fontSize(9).font('Helvetica-Bold').text('Name: ', { continued: true }).font('Helvetica').fillColor('#334155').text(user.username || 'N/A');
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#1E293B').text('Email: ', { continued: true }).font('Helvetica').fillColor('#334155').text(user.email || 'N/A');
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#1E293B').text('Phone: ', { continued: true }).font('Helvetica').fillColor('#334155').text(order.phone || 'N/A');
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#1E293B').text('Address: ', { continued: true }).font('Helvetica').fillColor('#334155').text(order.shipping_address || 'N/A');
+      if (order.note) {
+        doc.fontSize(9).font('Helvetica-Bold').fillColor('#1E293B').text('Note: ', { continued: true }).font('Helvetica').fillColor('#334155').text(order.note);
+      }
+
+      // Product Section (Right)
+      doc.fillColor('#1E293B');
+      doc.fontSize(12).font('Helvetica-Bold').text('Garment Specs', 300, startY + 15);
+      doc.moveDown(0.5);
+      doc.fontSize(9).font('Helvetica-Bold').text('Product: ', 300).font('Helvetica').fillColor('#334155').text(item.product_name || 'Custom Oversize T-Shirt', 360);
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#1E293B').text('Size: ', 300).font('Helvetica').fillColor('#334155').text(item.size || 'M', 360);
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#1E293B').text('Color: ', 300).font('Helvetica').fillColor('#334155').text(item.color || 'Navy', 360);
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#1E293B').text('Quantity: ', 300).font('Helvetica').fillColor('#334155').text(`x${item.quantity}`, 360);
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#1E293B').text('Price: ', 300).font('Helvetica').fillColor('#334155').text(`${item.price.toLocaleString('vi-VN')} VND`, 360);
+
+      doc.moveDown(3);
+      const nextY = doc.y;
+      doc.strokeColor('#CBD5E1').lineWidth(1).moveTo(40, nextY).lineTo(555, nextY).stroke();
+      doc.moveDown(1.5);
+
+      // Artwork Section
+      doc.fillColor('#1E293B');
+      doc.fontSize(14).font('Helvetica-Bold').text('Artwork Specifications', 40);
+      doc.moveDown(1);
+
+      if (item.custom_design_image) {
+        const parts = item.custom_design_image.split('|');
+        const isBase64 = parts[0].startsWith('data:image');
+
+        if (isBase64) {
+          doc.fontSize(10).fillColor('#475569').text('Canvas Studio Custom Designs:', 40);
+          doc.moveDown(1);
+
+          let imageY = doc.y;
+
+          // Front image
+          try {
+            const frontBase64 = parts[0].split(';base64,').pop();
+            const frontBuffer = Buffer.from(frontBase64, 'base64');
+            doc.image(frontBuffer, 40, imageY, { width: 220, height: 330 });
+            doc.fontSize(10).fillColor('#1E293B').font('Helvetica-Bold').text('MAT TRUOC (FRONT)', 40, imageY + 340, { width: 220, align: 'center' });
+          } catch (err) {
+            console.error('Front buffer render error:', err);
+            doc.fontSize(10).fillColor('#EF4444').text('Failed to render Front Artwork image', 40, imageY);
+          }
+
+          // Back image
+          if (parts[1]) {
+            try {
+              const backBase64 = parts[1].split(';base64,').pop();
+              const backBuffer = Buffer.from(backBase64, 'base64');
+              doc.image(backBuffer, 300, imageY, { width: 220, height: 330 });
+              doc.fontSize(10).fillColor('#1E293B').font('Helvetica-Bold').text('MAT SAU (BACK)', 300, imageY + 340, { width: 220, align: 'center' });
+            } catch (err) {
+              console.error('Back buffer render error:', err);
+              doc.fontSize(10).fillColor('#EF4444').text('Failed to render Back Artwork image', 300, imageY);
+            }
+          }
+        } else {
+          // AI generated specs
+          doc.fontSize(10).fillColor('#475569').text('AI Generated Design Specifications:', 40);
+          doc.moveDown(1);
+
+          try {
+            const urlObj = new URL(parts[0], 'http://localhost');
+            const promptVal = urlObj.searchParams.get('prompt') || 'No prompt';
+            const styleVal = urlObj.searchParams.get('style') || 'Minimalist';
+            const sizeVal = urlObj.searchParams.get('size') || 'medium';
+
+            // Draw prompt box
+            const boxY = doc.y;
+            doc.rect(40, boxY, 515, 120).fillColor('#F8FAFC').fillAndStroke('#E2E8F0');
+            doc.fillColor('#1E293B');
+            doc.fontSize(9).font('Helvetica-Bold').text('AI Prompt: ', 50, boxY + 15).font('Helvetica').text(promptVal, 50, boxY + 30, { width: 495 });
+            doc.fontSize(9).font('Helvetica-Bold').text('AI Style: ', 50, boxY + 80).font('Helvetica').text(styleVal, 50, boxY + 95);
+            doc.fontSize(9).font('Helvetica-Bold').text('AI Resolution Size: ', 200, boxY + 80).font('Helvetica').text(sizeVal, 200, boxY + 95);
+          } catch (e) {
+            doc.fontSize(10).font('Helvetica').text(`Design Source URL: ${parts[0]}`);
+          }
+        }
+      } else {
+        doc.fontSize(10).font('Helvetica').text('No design image provided.');
+      }
+
+      // End PDF creation
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+async function uploadPDFToCloudinary(pdfBuffer, fileName) {
+  return new Promise((resolve, reject) => {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'tshirt_shop_order_pdfs',
+        resource_type: 'raw',
+        public_id: fileName,
+        format: 'pdf'
+      },
+      (error, result) => {
+        if (error) {
+          return reject(error);
+        }
+        resolve(result.secure_url);
+      }
+    );
+    stream.end(pdfBuffer);
+  });
+}
 
 // @desc    Create a new order (Checkout cart OR buy direct)
 // @route   POST /api/orders
@@ -12,6 +161,7 @@ async function createOrder(req, res) {
   }
 
   try {
+    const user = await query.get('SELECT username, email FROM users WHERE id = ?', [userId]);
     let orderItemsToCreate = [];
     let isCartCheckout = false;
     let cartId = null;
@@ -28,6 +178,7 @@ async function createOrder(req, res) {
         }
         orderItemsToCreate.push({
           product_id: product.id,
+          product_name: product.name,
           quantity: item.quantity,
           price: product.price,
           size: item.size || null,
@@ -61,6 +212,7 @@ async function createOrder(req, res) {
         }
         orderItemsToCreate.push({
           product_id: item.product_id,
+          product_name: item.name,
           quantity: item.quantity,
           price: item.price,
           size: item.size || null,
@@ -87,10 +239,23 @@ async function createOrder(req, res) {
 
     // Insert order items & update product stocks
     for (const item of orderItemsToCreate) {
+      let pdfUrl = null;
+      if (item.custom_design_image) {
+        try {
+          console.log('Generating design specification PDF for custom item...');
+          const pdfBuffer = await createDesignPDF(item, { id: orderId, phone, shipping_address, note }, user);
+          const fileName = `order_${orderId}_item_${item.product_id}_${Date.now()}`;
+          pdfUrl = await uploadPDFToCloudinary(pdfBuffer, fileName);
+          console.log('Design PDF uploaded successfully to Cloudinary:', pdfUrl);
+        } catch (pdfErr) {
+          console.error('Error generating/uploading PDF:', pdfErr);
+        }
+      }
+
       await query.run(`
-        INSERT INTO order_items (order_id, product_id, quantity, price, size, color, custom_design_image)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [orderId, item.product_id, item.quantity, item.price, item.size, item.color, item.custom_design_image]);
+        INSERT INTO order_items (order_id, product_id, quantity, price, size, color, custom_design_image, custom_design_pdf)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `, [orderId, item.product_id, item.quantity, item.price, item.size, item.color, item.custom_design_image, pdfUrl]);
 
       // Deduct stock
       await query.run('UPDATE products SET stock = stock - ? WHERE id = ?', [item.quantity, item.product_id]);
