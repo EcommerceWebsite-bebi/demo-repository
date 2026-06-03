@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bí Be Bé Bi Hihi | AI Fashion Atelier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&amp;family=Hanken+Grotesk:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#1c1b1b",
+                    "surface-bright": "#f9f9f9",
+                    "secondary-fixed": "#e3e3de",
+                    "on-error": "#ffffff",
+                    "on-primary-container": "#858383",
+                    "background": "#f9f9f9",
+                    "secondary-fixed-dim": "#c6c7c2",
+                    "outline-variant": "#c4c7c7",
+                    "on-error-container": "#93000a",
+                    "on-surface": "#1a1c1c",
+                    "on-secondary-container": "#62635f",
+                    "surface-container-high": "#e8e8e8",
+                    "on-tertiary": "#ffffff",
+                    "primary-container": "#1c1b1b",
+                    "tertiary-fixed-dim": "#c7c7c0",
+                    "outline": "#747878",
+                    "tertiary-fixed": "#e3e3dc",
+                    "on-surface-variant": "#444748",
+                    "inverse-primary": "#c8c6c5",
+                    "surface-container-low": "#f3f3f4",
+                    "on-primary-fixed-variant": "#474646",
+                    "surface-tint": "#5f5e5e",
+                    "secondary": "#5d5f5b",
+                    "surface-container": "#eeeeee",
+                    "secondary-container": "#e0e0db",
+                    "tertiary": "#000000",
+                    "primary-fixed-dim": "#c8c6c5",
+                    "inverse-on-surface": "#f0f1f1",
+                    "tertiary-container": "#1a1c18",
+                    "on-secondary": "#ffffff",
+                    "surface-dim": "#dadada",
+                    "on-secondary-fixed": "#1a1c19",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed-variant": "#464742",
+                    "on-secondary-fixed-variant": "#454744",
+                    "on-background": "#1a1c1c",
+                    "surface-container-highest": "#e2e2e2",
+                    "on-primary": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "primary-fixed": "#e5e2e1",
+                    "surface-variant": "#e2e2e2",
+                    "inverse-surface": "#2f3131",
+                    "on-tertiary-container": "#83847e",
+                    "surface-container-lowest": "#ffffff",
+                    "surface": "#f9f9f9",
+                    "primary": "#000000",
+                    "on-tertiary-fixed": "#1a1c18"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-xl": "8rem",
+                    "gutter": "1px",
+                    "margin-x": "4rem",
+                    "container-max": "100%",
+                    "stack-md": "4rem",
+                    "margin-x-mobile": "1.5rem"
+            },
+            "fontFamily": {
+                    "headline-md": ["Playfair Display"],
+                    "headline-lg-mobile": ["Playfair Display"],
+                    "headline-lg": ["Playfair Display"],
+                    "body-md": ["Hanken Grotesk"],
+                    "label-sm": ["Hanken Grotesk"],
+                    "display-lg": ["Playfair Display"],
+                    "body-lg": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "headline-md": ["32px", {"lineHeight": "1.3", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["32px", {"lineHeight": "1.2", "fontWeight": "400"}],
+                    "headline-lg": ["48px", {"lineHeight": "1.2", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                    "display-lg": ["80px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .blueprint-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, #D9D9D2 1px, transparent 1px), linear-gradient(to bottom, #D9D9D2 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<header class="bg-surface/80 backdrop-blur-xl dark:bg-surface-container/80 text-primary dark:text-on-primary docked full-width top-0 sticky z-50 border-b border-outline-variant flex justify-between items-center w-full px-margin-x h-24">
+<div class="font-headline-md text-headline-md tracking-tighter text-primary dark:text-on-primary font-bold">Bí Be Bé Bi Hihi</div>
+<nav class="hidden md:flex items-center space-x-8">
+<a class="text-primary dark:text-on-primary font-bold border-b-2 border-primary font-label-sm text-label-sm h-full flex items-center" href="#">Trang chủ</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-opacity duration-300 font-label-sm text-label-sm h-full flex items-center" href="#">Thử áo AI</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-opacity duration-300 font-label-sm text-label-sm h-full flex items-center" href="#">QR Cá nhân hóa</a>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-opacity duration-300 font-label-sm text-label-sm h-full flex items-center" href="#">Về chúng tôi</a>
+</nav>
+<div class="flex items-center space-x-6">
+<div class="relative hidden sm:block">
+<input class="bg-surface-container border-none text-body-md py-2 pl-4 pr-10 rounded-full w-48 focus:ring-1 focus:ring-primary" placeholder="Search" type="text"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant scale-75">search</span>
+</div>
+<button class="hover:opacity-70 transition-opacity duration-300 scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+</button>
+<button class="hover:opacity-70 transition-opacity duration-300 scale-95 transition-transform duration-200">
+<span class="material-symbols-outlined" data-icon="shopping_bag">shopping_bag</span>
+</button>
+</div>
+</header>
+<!-- Cinematic Hero Section -->
+<section class="relative h-screen w-full flex items-center overflow-hidden border-b border-outline-variant">
+<div class="absolute inset-0 z-0">
+<img alt="Cinematic Water Texture" class="w-full h-full object-cover grayscale brightness-50" data-alt="A cinematic, high-contrast photograph of deep ocean waves under dramatic evening lighting. The water texture is rich and detailed, appearing like flowing dark silk. The atmosphere is sophisticated and powerful, reflecting a minimalist luxury brand aesthetic. The lighting is low-key with subtle silvery highlights on the wave crests, creating a sense of mysterious depth and vanguard technology." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4E4yk4tLOEcebsUxU0ejc8h_5kpYFqm7e1AwlKnCDuD-Rzn8-gZyjCj7LyyLMWL1KOKRdiiETL7ifYeOitSyfIi7_O5tdNq-JP446iusWUKRA795dHrrYsczBzSaLqOTgV2eLziTf_Dn7wlgjmPdzkQHBySYjpF4fG01XYHhW36bMVDUy_NGqvdRsCQZDNSfmk2E50BLnTgokudy4hoxna1DSYfHzWPOc1YH1rSiNidvZzoW20ypPaGlej-NvZyTEniStDCs8vxw"/>
+</div>
+<div class="relative z-10 px-margin-x max-w-4xl">
+<h1 class="font-display-lg text-display-lg text-surface-container-lowest mb-6">Trải nghiệm thử áo online bằng AI</h1>
+<p class="font-body-lg text-body-lg text-surface-container-low mb-12 max-w-xl opacity-90">Chính bạn, chính form áo. Không cần ra cửa hàng. Không còn chọn sai size. Công nghệ tương lai cho tủ đồ của bạn.</p>
+<button class="bg-surface-container-lowest text-primary px-10 py-5 font-label-sm text-label-sm uppercase tracking-widest hover:bg-primary hover:text-on-primary transition-colors duration-500">Xem cách hoạt động</button>
+</div>
+</section>
+<!-- Brand Values Ticker -->
+<div class="w-full py-6 border-b border-outline-variant bg-surface overflow-hidden whitespace-nowrap">
+<div class="flex items-center space-x-12 animate-marquee">
+<span class="flex items-center gap-3 font-label-sm text-label-sm text-on-surface-variant uppercase"><span class="material-symbols-outlined text-[16px]">verified</span> Secure AI Processing</span>
+<span class="flex items-center gap-3 font-label-sm text-label-sm text-on-surface-variant uppercase"><span class="material-symbols-outlined text-[16px]">public</span> Global Craftsmanship</span>
+<span class="flex items-center gap-3 font-label-sm text-label-sm text-on-surface-variant uppercase"><span class="material-symbols-outlined text-[16px]">bolt</span> Real-time Visualization</span>
+<span class="flex items-center gap-3 font-label-sm text-label-sm text-on-surface-variant uppercase"><span class="material-symbols-outlined text-[16px]">qr_code</span> Personalized QR Identity</span>
+<!-- Duplicates for scrolling effect -->
+<span class="flex items-center gap-3 font-label-sm text-label-sm text-on-surface-variant uppercase"><span class="material-symbols-outlined text-[16px]">verified</span> Secure AI Processing</span>
+<span class="flex items-center gap-3 font-label-sm text-label-sm text-on-surface-variant uppercase"><span class="material-symbols-outlined text-[16px]">public</span> Global Craftsmanship</span>
+</div>
+</div>
+<!-- Product Grid Section -->
+<section class="py-stack-xl px-margin-x">
+<div class="flex justify-between items-end mb-16">
+<div>
+<span class="font-label-sm text-label-sm text-outline mb-4 block">NEW ARRIVALS</span>
+<h2 class="font-headline-lg text-headline-lg">Tất cả sản phẩm</h2>
+</div>
+<a class="font-label-sm text-label-sm border-b border-primary pb-1 hover:opacity-50 transition-opacity" href="#">XEM TẤT CẢ</a>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter bg-outline-variant border border-outline-variant">
+<!-- Product Card 1 -->
+<div class="bg-surface p-6 group cursor-pointer">
+<div class="relative overflow-hidden bg-secondary-container aspect-square mb-6">
+<img alt="Product 1" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A pair of high-performance neon yellow Nike Running sneakers displayed against a clean, minimalist studio background. The lighting is sharp and professional, highlighting the mesh texture and sleek silhouette of the shoe. The aesthetic is clean and high-end, utilizing the brand's minimalist tech visual identity with sharp focus and cold precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC73OxiTh6PCBda9-sxAR8uUwbyQEr5i4AKAY2Z-yhkduMVJuIeaSme7UKCWvhwLYOYagWpOaW0J3Akh5lDXxDikAV0xH2skxSMPQSVmi5Fu_EJFKoI3Dj8DT3DnpI4H5LzTqVX7gTjut1jywrFis39cRCJEzp6eQKsJDoV4HjObQDxHUJbYffKjEG__HSeTq9jIF0RaUhxicCKaBawByxBI8iNEe7JR2YfToHn9VTz5KaiHQ4Fx7JFCUllW2poQJqCyFYcNATUVGg"/>
+<div class="absolute bottom-0 left-0 right-0 bg-surface/70 backdrop-blur-md p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 border-t border-outline-variant flex justify-between items-center">
+<span class="font-label-sm text-label-sm">QUICK ADD</span>
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</div>
+</div>
+<h3 class="font-headline-md text-[20px] mb-2">Nike Running - Neon</h3>
+<div class="flex justify-between items-center">
+<span class="font-body-md text-primary font-bold">$ 210.00</span>
+<button class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="shopping_bag">shopping_bag</button>
+</div>
+</div>
+<!-- Product Card 2 -->
+<div class="bg-surface p-6 group cursor-pointer">
+<div class="relative overflow-hidden bg-secondary-container aspect-square mb-6">
+<img alt="Product 2" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A minimalist photograph of a sleek, white performance running shoe positioned centrally on a neutral grey studio surface. The lighting is exceptionally soft and diffused, emphasizing the sculptural form of the design. The environment is sterile and professional, capturing a digital atelier mood with monochrome tones and high-key brightness." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlvn5cqrzXONRejRv4HdNtElwNc3oChLYMsUuTN_MbnxFV0Tz6SYzZVBlhi-kngcHV8OfP5NRusFJ6P4ONHXtTYNlaShWuhIJvArIM1IUV6C9LmoL3RBITfWc_Ah6wzLppV9mIREFYb9MkNc7Hyb4-H4m-C0zkrYjI0-gdCbzRuQRJiS6nAqldLX7BAXMx2l6taMHs9JfUH1Edi-5yO04o5uZtQe2h3u2ZRVv745RiOXlNGKBkFHhtu3MMNAVUL7YF6gYTVAlv5wI"/>
+<div class="absolute bottom-0 left-0 right-0 bg-surface/70 backdrop-blur-md p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 border-t border-outline-variant flex justify-between items-center">
+<span class="font-label-sm text-label-sm">QUICK ADD</span>
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</div>
+</div>
+<h3 class="font-headline-md text-[20px] mb-2">Nike Sport - Phantom</h3>
+<div class="flex justify-between items-center">
+<span class="font-body-md text-primary font-bold">$ 185.00</span>
+<button class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="shopping_bag">shopping_bag</button>
+</div>
+</div>
+<!-- Product Card 3 -->
+<div class="bg-surface p-6 group cursor-pointer">
+<div class="relative overflow-hidden bg-secondary-container aspect-square mb-6">
+<img alt="Product 3" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A creative high-fashion sneaker in vibrant colors set against a pristine white background. The composition is structured and minimalist, using thin dividers and tonal layering to create depth. The lighting is clinical yet artistic, focusing on the intricate textures and avant-garde design of the footwear in a digital gallery style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6BcqsWBgKSc4WVsW8LDHOi-3-RhpYL60ok7TztseKVlKSu2Rmb5QkF8-RJl79NxMQoIhO8IzNwZztijfS4TbA3XQmwPPPcmaHKZPQTG5Y_Z6_vN6DrtLj4433xyqShkAB6zdsq4Hq3uTCVh6yzT6s2adWO6zg6qw15hzFyxfbI9vLmu1_68BlLNttIf6BSc6i5bUrueTwHUp1EdkRpNUOUd_uX4_8MsBzIQS0eEozsB4YTeNzcu_zhzi_lEZ-cuwa2zHA6phtJlM"/>
+<div class="absolute bottom-0 left-0 right-0 bg-surface/70 backdrop-blur-md p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 border-t border-outline-variant flex justify-between items-center">
+<span class="font-label-sm text-label-sm">QUICK ADD</span>
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</div>
+</div>
+<h3 class="font-headline-md text-[20px] mb-2">Nike Air - Prism</h3>
+<div class="flex justify-between items-center">
+<span class="font-body-md text-primary font-bold">$ 245.00</span>
+<button class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="shopping_bag">shopping_bag</button>
+</div>
+</div>
+<!-- Product Card 4 -->
+<div class="bg-surface p-6 group cursor-pointer">
+<div class="relative overflow-hidden bg-secondary-container aspect-square mb-6">
+<img alt="Product 4" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="Classic high-top basketball sneakers presented in a minimalist high-fashion editorial style. The lighting creates subtle, long shadows that define the shape without using harsh gradients. The palette is muted with deep charcoal and crisp white accents, maintaining a sophisticated, authoritative mood typical of a modern digital luxury brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDN1uowtMBLbkxCxeo1Nfhf7whBiqi1jHRsvQcJBtKh6Rd2PmqmGIHq41wNfJdWDRKi7B-W_jEJ5u4dME4qMbK8S0IAwL3OTixnZuOaptHlTbOJOBS4cSaVxtDRKVx5PtxNfn_eM2Yq8otw4XzSY4xm84wL28C5yXxI-_47NdD6aaKnFpssZKGShLyWpiCP8WeQ6RJV6irMv6DUlkN9z3O7RBJ0X84BLsvg6iihI9JbiRxq2kokIbUU1AvPwRunIqs8yy3PU1mdcR0"/>
+<div class="absolute bottom-0 left-0 right-0 bg-surface/70 backdrop-blur-md p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 border-t border-outline-variant flex justify-between items-center">
+<span class="font-label-sm text-label-sm">QUICK ADD</span>
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+</div>
+</div>
+<h3 class="font-headline-md text-[20px] mb-2">Nike High - Legacy</h3>
+<div class="flex justify-between items-center">
+<span class="font-body-md text-primary font-bold">$ 220.00</span>
+<button class="material-symbols-outlined text-outline group-hover:text-primary transition-colors" data-icon="shopping_bag">shopping_bag</button>
+</div>
+</div>
+</div>
+</section>
+<!-- AI & Security Feature Section -->
+<section class="bg-surface-container py-stack-xl px-margin-x flex flex-col items-center text-center">
+<div class="w-16 h-16 bg-surface flex items-center justify-center border border-outline-variant mb-8 rounded-full">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 0;">shield</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg mb-6">Bảo mật &amp; Quyền riêng tư</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mb-12">
+            Chúng tôi cam kết bảo vệ dữ liệu của bạn với mã hóa cao cấp. Tất cả hình ảnh được xóa ngay sau khi xử lý. Privacy-first AI chính là tôn chỉ của chúng tôi.
+        </p>
+<div class="flex flex-wrap justify-center gap-12 border-t border-outline-variant pt-10">
+<div class="flex items-center gap-2 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-primary text-sm" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                DỮ LIỆU ĐƯỢC MÃ HÓA
+            </div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-primary text-sm" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                HÌNH ẢNH TỰ ĐỘNG XÓA
+            </div>
+<div class="flex items-center gap-2 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-primary text-sm" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                PRIVACY-FIRST AI
+            </div>
+</div>
+</section>
+<!-- Support Strip -->
+<div class="w-full py-12 border-y border-outline-variant flex flex-col md:flex-row justify-center items-center gap-6 md:gap-12 bg-surface">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-3xl">phone_in_talk</span>
+<span class="font-headline-md text-[24px]">Hỗ trợ / Mua hàng : 0932198848</span>
+</div>
+</div>
+<!-- Footer -->
+<footer class="bg-surface dark:bg-surface-container flex flex-col w-full px-margin-x py-stack-md border-t border-outline-variant">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+<div class="col-span-1 md:col-span-1">
+<div class="font-headline-md text-headline-md text-primary dark:text-on-primary mb-4 font-bold">MOUSEEE</div>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-xs">
+                    Nền tảng thời trang công nghệ tiên phong tại Việt Nam. Kết hợp haute couture với trí tuệ nhân tạo.
+                </p>
+</div>
+<div class="col-span-1">
+<h4 class="font-label-sm text-label-sm text-primary mb-6 uppercase tracking-widest">Sản phẩm</h4>
+<ul class="space-y-4">
+<li><a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Trang chủ</a></li>
+<li><a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Thử áo AI</a></li>
+<li><a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">QR Cá nhân hóa</a></li>
+<li><a class="font-body-md text-body-md text-on-surface-variant hover:text-primary transition-colors" href="#">Về chúng tôi</a></li>
+</ul>
+</div>
+<div class="col-span-1">
+<h4 class="font-label-sm text-label-sm text-primary mb-6 uppercase tracking-widest">Liên hệ</h4>
+<ul class="space-y-4">
+<li class="font-body-md text-body-md text-on-surface-variant">Email: hello@bibebebihihi.com</li>
+<li class="font-body-md text-body-md text-on-surface-variant">Team: Spider Man and Girl</li>
+</ul>
+</div>
+<div class="col-span-1">
+<h4 class="font-label-sm text-label-sm text-primary mb-6 uppercase tracking-widest">Newsletter</h4>
+<form class="relative">
+<input class="w-full bg-transparent border-b border-outline-variant border-x-0 border-t-0 px-0 py-3 text-body-md focus:ring-0 focus:border-primary" placeholder="Email của bạn" type="email"/>
+<button class="absolute right-0 top-1/2 -translate-y-1/2 font-label-sm text-label-sm font-bold" type="submit">GỬI</button>
+</form>
+</div>
+</div>
+<div class="pt-8 border-t border-outline-variant flex flex-col md:flex-row justify-between items-center gap-4">
+<div class="font-label-sm text-label-sm text-on-surface-variant">© 2026 Bí Be Bé Bi Hihi. All rights reserved.</div>
+<div class="flex gap-8">
+<a class="opacity-80 hover:opacity-100 transition-opacity" href="#"><span class="material-symbols-outlined" data-icon="facebook">social_leaderboard</span></a>
+<a class="opacity-80 hover:opacity-100 transition-opacity" href="#"><span class="material-symbols-outlined" data-icon="instagram">retweet</span></a>
+<a class="opacity-80 hover:opacity-100 transition-opacity" href="#"><span class="material-symbols-outlined" data-icon="alternate_email">alternate_email</span></a>
+</div>
+</div>
+</footer>
+</body></html>
