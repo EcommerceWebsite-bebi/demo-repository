@@ -47,9 +47,13 @@ export async function POST(req: Request) {
     }
 
     // Check if user has a cart, create if not (backwards compatibility/seeding fallback)
-    const cart = await query.get<{ id: number }>('SELECT id FROM carts WHERE user_id = ?', [user.id]);
-    if (!cart) {
-      await query.run('INSERT INTO carts (user_id) VALUES (?)', [user.id]);
+    try {
+      const cart = await query.get<{ id: number }>('SELECT id FROM carts WHERE user_id = ?', [user.id]);
+      if (!cart) {
+        await query.run('INSERT INTO carts (user_id) VALUES (?)', [user.id]);
+      }
+    } catch (e) {
+      console.warn('Could not check/create cart in database (Read-only SQLite), skipping...');
     }
 
     // Generate token
