@@ -9,7 +9,7 @@ import { useApp } from "../../components/AppContext";
 import { ShoppingBag, CreditCard, Loader2, CheckCircle2, MapPin, Phone, MessageSquare, Sparkles } from "lucide-react";
 
 export default function CustomPage() {
-  const { products, user, token, setIsAuthOpen, checkoutDirect } = useApp();
+  const { products, user, token, setIsAuthOpen, checkoutDirect, validateCoupon } = useApp();
 
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState("Minimalist");
@@ -26,6 +26,12 @@ export default function CustomPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+
+  // Coupon states
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount_amount: number; discount_type: string; discount_value: number } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   // Sync user info when logged in
   useEffect(() => {
@@ -51,6 +57,33 @@ export default function CustomPage() {
     colors: ["Black", "White"]
   };
 
+  async function handleApplyCoupon(e: React.MouseEvent) {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    setCouponError(null);
+    setCouponLoading(true);
+    try {
+      const res = await validateCoupon(couponCode, customizableProduct.price);
+      if (res.success && res.coupon) {
+        setAppliedCoupon(res.coupon);
+        setCouponError(null);
+      } else {
+        setCouponError(res.message || "Áp dụng mã giảm giá thất bại");
+        setAppliedCoupon(null);
+      }
+    } catch (err) {
+      setCouponError("Lỗi hệ thống khi kiểm tra mã");
+    } finally {
+      setCouponLoading(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponError(null);
+  }
+
   async function handlePurchase(e: React.FormEvent) {
     e.preventDefault();
     setPurchaseError(null);
@@ -75,9 +108,11 @@ export default function CustomPage() {
         custom_design_image: backPreviewUrl ? `${previewUrl}|${backPreviewUrl}` : previewUrl
       }];
 
-      const res = await checkoutDirect(shippingAddress, phoneVal, noteVal, items);
+      const res = await checkoutDirect(shippingAddress, phoneVal, noteVal, items, appliedCoupon?.code || undefined);
       if (res.success) {
         setSuccess(true);
+        setAppliedCoupon(null);
+        setCouponCode("");
         setTimeout(() => {
           setSuccess(false);
           setPrompt("");
@@ -156,10 +191,24 @@ export default function CustomPage() {
                       </div>
                     )}
 
-                    {/* Price display */}
-                    <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                      <span className="text-xs text-gray-500">Sản phẩm: {customizableProduct.name}</span>
-                      <span className="text-sm font-extrabold text-gray-900">{customizableProduct.price.toLocaleString('vi-VN')} đ</span>
+                    {/* Price display with discount */}
+                    <div className="space-y-2 border-b border-gray-100 pb-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">Sản phẩm: {customizableProduct.name}</span>
+                        <span className="text-xs font-semibold text-gray-800">{customizableProduct.price.toLocaleString('vi-VN')} đ</span>
+                      </div>
+                      {appliedCoupon && (
+                        <div className="flex justify-between items-center text-xs text-rose-600 font-semibold">
+                          <span>Giảm giá ({appliedCoupon.code})</span>
+                          <span>-{appliedCoupon.discount_amount.toLocaleString('vi-VN')} đ</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pt-1 border-t border-dashed border-gray-100">
+                        <span className="text-xs font-bold text-gray-700">Tổng thanh toán:</span>
+                        <span className="text-sm font-extrabold text-gray-900">
+                          {Math.max(0, customizableProduct.price - (appliedCoupon?.discount_amount || 0)).toLocaleString('vi-VN')} đ
+                        </span>
+                      </div>
                     </div>
 
                     {/* Size and Color selections for custom shirt */}
@@ -238,6 +287,51 @@ export default function CustomPage() {
                             className="w-full rounded-xl border border-gray-200 p-2.5 text-xs text-gray-800 focus:border-black outline-none transition resize-none"
                           />
                         </div>
+
+                        {/* Coupon Code Input */}
+                        <div className="space-y-1.5 border-t border-gray-100 pt-3">
+                          <label className="block text-[10px] font-extrabold uppercase tracking-wider text-gray-400 mb-1">
+                            Mã giảm giá
+                          </label>
+                          {appliedCoupon ? (
+                            <div className="flex items-center justify-between bg-emerald-50 border border-emerald-250 text-emerald-800 rounded-xl px-4 py-2.5 text-xs">
+                              <div className="flex items-center gap-2">
+                                <span className="font-extrabold uppercase tracking-wide">{appliedCoupon.code}</span>
+                                <span className="text-[10px] text-emerald-600 font-bold">
+                                  (Đã giảm {appliedCoupon.discount_type === 'percentage' ? `${appliedCoupon.discount_value}%` : `${appliedCoupon.discount_value.toLocaleString('vi-VN')} đ`})
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleRemoveCoupon}
+                                className="text-xs text-rose-600 hover:text-rose-800 font-bold cursor-pointer"
+                              >
+                                Gỡ bỏ
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                placeholder="Nhập mã (ví dụ: WELCOME10)"
+                                value={couponCode}
+                                onChange={(e) => setCouponCode(e.target.value)}
+                                className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-xs text-gray-850 focus:border-black outline-none transition uppercase bg-white"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleApplyCoupon}
+                                disabled={couponLoading || !couponCode.trim()}
+                                className="bg-black hover:bg-gray-850 text-white rounded-xl px-4 py-2 text-xs font-bold transition disabled:opacity-40 cursor-pointer"
+                              >
+                                {couponLoading ? "Đang áp..." : "Áp dụng"}
+                              </button>
+                            </div>
+                          )}
+                          {couponError && (
+                            <p className="text-[10px] text-rose-600 font-semibold">{couponError}</p>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <div className="bg-gray-50 border border-dashed border-gray-200 rounded-xl p-4 text-center text-xs text-gray-500 my-2">
@@ -257,14 +351,14 @@ export default function CustomPage() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full py-3 bg-black hover:bg-gray-850 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 active:scale-98 transition shadow"
+                      className="w-full py-3 bg-black hover:bg-gray-850 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 active:scale-98 transition shadow cursor-pointer"
                     >
                       {loading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : token ? (
                         <>
                           <CreditCard className="w-4 h-4" />
-                          Thanh Toán Thiết Kế ({customizableProduct.price.toLocaleString('vi-VN')} đ)
+                          Thanh Toán Thiết Kế ({Math.max(0, customizableProduct.price - (appliedCoupon?.discount_amount || 0)).toLocaleString('vi-VN')} đ)
                         </>
                       ) : (
                         "Đăng Nhập Để Mua Ngay"

@@ -266,19 +266,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Internal: Fetch cart
   async function fetchCartInternal(authToken: string) {
-    try {
-      const res = await fetch(`${API_URL}/api/cart`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-      const data = await res.json();
-      if (data.success && data.cart) {
-        setCart(data.cart);
-      }
-    } catch (e) {
-      console.error("Fetch cart error:", e);
-    }
+    // Luôn tải giỏ hàng từ localStorage để tránh lỗi ghi file SQLite trên Vercel
+    loadLocalCart();
   }
 
   // Internal: Fetch orders
@@ -391,127 +380,66 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
 
-    if (token) {
-      // Sync with database
-      try {
-        const res = await fetch(`${API_URL}/api/cart/items`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            product_id: productId,
-            quantity,
-            size,
-            color,
-          }),
-        });
-        const data = await res.json();
-        if (data.success && data.cart) {
-          setCart(data.cart);
-        }
-      } catch (e) {
-        console.error("Add item to cart DB error:", e);
-      }
+    // Luôn sử dụng Local Storage Cart để hoạt động ổn định trên Vercel (bỏ qua ghi DB)
+    const currentItems = [...cart.items];
+    const existingIdx = currentItems.findIndex(
+      (item) =>
+        item.product_id === productId &&
+        item.size === size &&
+        item.color === color
+    );
+
+    if (existingIdx > -1) {
+      currentItems[existingIdx].quantity += quantity;
     } else {
-      // Local storage cart
-      const currentItems = [...cart.items];
-      const existingIdx = currentItems.findIndex(
-        (item) =>
-          item.product_id === productId &&
-          item.size === size &&
-          item.color === color
-      );
-
-      if (existingIdx > -1) {
-        currentItems[existingIdx].quantity += quantity;
-      } else {
-        currentItems.push({
-          id: `local-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          product_id: productId,
-          quantity,
-          size,
-          color,
-          name: product.name,
-          price: product.price,
-          image: product.image,
-          is_customizable: product.is_customizable,
-        });
-      }
-
-      const total = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      saveLocalCart({
-        items: currentItems,
-        total_price: parseFloat(total.toFixed(2)),
+      currentItems.push({
+        id: `local-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        product_id: productId,
+        quantity,
+        size,
+        color,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        is_customizable: product.is_customizable,
       });
     }
+
+    const total = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    saveLocalCart({
+      items: currentItems,
+      total_price: parseFloat(total.toFixed(2)),
+    });
   }
 
   // Public: Update Quantity
   async function updateCartItem(itemId: number | string, quantity: number) {
-    if (token) {
-      try {
-        const res = await fetch(`${API_URL}/api/cart/items/${itemId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ quantity }),
-        });
-        const data = await res.json();
-        if (data.success && data.cart) {
-          setCart(data.cart);
-        }
-      } catch (e) {
-        console.error("Update cart item error:", e);
+    // Luôn sử dụng Local Storage Cart để hoạt động ổn định trên Vercel (bỏ qua ghi DB)
+    let currentItems = [...cart.items];
+    const idx = currentItems.findIndex((item) => item.id === itemId);
+    if (idx > -1) {
+      if (quantity <= 0) {
+        currentItems.splice(idx, 1);
+      } else {
+        currentItems[idx].quantity = quantity;
       }
-    } else {
-      // Local
-      let currentItems = [...cart.items];
-      const idx = currentItems.findIndex((item) => item.id === itemId);
-      if (idx > -1) {
-        if (quantity <= 0) {
-          currentItems.splice(idx, 1);
-        } else {
-          currentItems[idx].quantity = quantity;
-        }
-      }
-      const total = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      saveLocalCart({
-        items: currentItems,
-        total_price: parseFloat(total.toFixed(2)),
-      });
     }
+    const total = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    saveLocalCart({
+      items: currentItems,
+      total_price: parseFloat(total.toFixed(2)),
+    });
   }
 
   // Public: Remove Item
   async function removeCartItem(itemId: number | string) {
-    if (token) {
-      try {
-        const res = await fetch(`${API_URL}/api/cart/items/${itemId}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await res.json();
-        if (data.success) {
-          await fetchCartInternal(token);
-        }
-      } catch (e) {
-        console.error("Remove cart item error:", e);
-      }
-    } else {
-      // Local
-      const currentItems = cart.items.filter((item) => item.id !== itemId);
-      const total = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      saveLocalCart({
-        items: currentItems,
-        total_price: parseFloat(total.toFixed(2)),
-      });
-    }
+    // Luôn sử dụng Local Storage Cart để hoạt động ổn định trên Vercel (bỏ qua ghi DB)
+    const currentItems = cart.items.filter((item) => item.id !== itemId);
+    const total = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    saveLocalCart({
+      items: currentItems,
+      total_price: parseFloat(total.toFixed(2)),
+    });
   }
 
   // Public: Checkout Cart
