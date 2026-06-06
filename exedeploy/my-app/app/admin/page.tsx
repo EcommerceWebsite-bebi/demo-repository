@@ -115,10 +115,10 @@ export default function AdminPage() {
 
   const fetchVisitorCount = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/visitors`);
+      const res = await fetch(`${API_URL}/api/visitors`, { cache: "no-store" });
       const data = await res.json();
       if (data.success) {
-        setVisitorCount(data.count);
+        setVisitorCount(data.count ?? 0);
       }
     } catch (err) {
       console.error("Lỗi khi load số lượng truy cập:", err);
@@ -751,7 +751,7 @@ export default function AdminPage() {
                 <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/5 rounded-bl-full" />
                 <div className="space-y-1.5">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Số Lượng Truy Cập</span>
-                  <h3 className="text-xl font-extrabold text-white">{visitorCount.toLocaleString("vi-VN")} Lượt</h3>
+                  <h3 className="text-xl font-extrabold text-white">{(Number(visitorCount) || 0).toLocaleString("vi-VN")} Lượt</h3>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
                   <Users className="w-5 h-5" />
