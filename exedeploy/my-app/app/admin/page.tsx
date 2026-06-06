@@ -111,9 +111,35 @@ export default function AdminPage() {
     }
   };
 
+  const [visitorCount, setVisitorCount] = useState<number>(0);
+
+  const fetchVisitorCount = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/visitors`);
+      const data = await res.json();
+      if (data.success) {
+        setVisitorCount(data.count);
+      }
+    } catch (err) {
+      console.error("Lỗi khi load số lượng truy cập:", err);
+    }
+  };
+
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (isClient) {
+      fetchVisitorCount();
+    }
+  }, [isClient]);
+
+  useEffect(() => {
+    if (activeTab === "overview" && isClient) {
+      fetchVisitorCount();
+    }
+  }, [activeTab, isClient]);
 
   useEffect(() => {
     if (activeTab === "coupons" && isClient) {
@@ -666,7 +692,7 @@ export default function AdminPage() {
           <div className="space-y-8 animate-fade-up">
             
             {/* Stat Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
               
               {/* Card Revenue */}
               <div className="bg-slate-950/50 backdrop-blur-md border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-lg relative overflow-hidden">
@@ -717,6 +743,18 @@ export default function AdminPage() {
                     : "bg-slate-800 border-slate-700 text-slate-400"
                 }`}>
                   <AlertTriangle className="w-5 h-5" />
+                </div>
+              </div>
+
+              {/* Card Visitors */}
+              <div className="bg-slate-950/50 backdrop-blur-md border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-cyan-500/5 rounded-bl-full" />
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Số Lượng Truy Cập</span>
+                  <h3 className="text-xl font-extrabold text-white">{visitorCount.toLocaleString("vi-VN")} Lượt</h3>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                  <Users className="w-5 h-5" />
                 </div>
               </div>
             </div>

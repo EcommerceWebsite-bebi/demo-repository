@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export interface Product {
   id: number;
@@ -181,6 +181,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         loadLocalCart();
       }
+      // Track session visitor
+      if (typeof window !== "undefined" && !sessionStorage.getItem("visited")) {
+        try {
+          await fetch(`${API_URL}/api/visitors/increment`, { method: "POST" });
+          sessionStorage.setItem("visited", "true");
+        } catch (e) {
+          console.error("Increment visitor error:", e);
+        }
+      }
+
       setIsLoading(false);
     }
     init();
