@@ -2,78 +2,125 @@ import sqlite3Init from 'sqlite3';
 import path from 'path';
 import fs from 'fs';
 import bcrypt from 'bcryptjs';
-
-const sqlite3 = sqlite3Init.verbose();
-
-const dbPath = path.resolve(process.cwd(), process.env.DB_PATH || 'backend/tshirt_shop.sqlite');
-console.log('Connecting to database at:', dbPath);
-
-// Ensure the directory for the SQLite file exists
-const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
-}
-
-export const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error opening SQLite database:', err.message);
-  } else {
-    console.log('Connected to SQLite database successfully.');
-    initializeDatabase().catch((error) => {
-      console.error('Error auto-initializing database:', error);
-    });
-  }
-});
+import { createClient } from '@libsql/client';
 
 interface RunResult {
   id: number;
   changes: number;
 }
 
+const isTurso = !!process.env.TURSO_DATABASE_URL;
+
+export let db: any = null;
+let libsqlClient: any = null;
+
+if (isTurso) {
+  console.log('Connecting to Turso Cloud SQLite database at:', process.env.TURSO_DATABASE_URL);
+  libsqlClient = createClient({
+    url: process.env.TURSO_DATABASE_URL!,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
+
+  // Auto-initialize Turso database asynchronously
+  initializeDatabase().catch((error) => {
+    console.error('Error auto-initializing Turso database:', error);
+  });
+} else {
+  const sqlite3 = sqlite3Init.verbose();
+  const dbPath = path.resolve(process.cwd(), process.env.DB_PATH || 'backend/tshirt_shop.sqlite');
+  console.log('Connecting to local SQLite database at:', dbPath);
+
+  // Ensure the directory for the SQLite file exists
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+
+  db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error('Error opening SQLite database:', err.message);
+    } else {
+      console.log('Connected to SQLite database successfully.');
+      initializeDatabase().catch((error) => {
+        console.error('Error auto-initializing database:', error);
+      });
+    }
+  });
+}
+
 export const query = {
   run(sql: string, params: any[] = []): Promise<RunResult> {
-    return new Promise((resolve, reject) => {
-      db.run(sql, params, function (err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ id: this.lastID, changes: this.changes });
-        }
+    if (isTurso) {
+      return (async () => {
+        const res = await libsqlClient.execute({ sql, args: params });
+        return {
+          id: res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : 0,
+          changes: res.rowsAffected
+        };
+      })();
+    } else {
+      return new Promise((resolve, reject) => {
+        db.run(sql, params, function (this: any, err: any) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve({ id: this.lastID, changes: this.changes });
+          }
+        });
       });
-    });
+    }
   },
   get<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
-    return new Promise((resolve, reject) => {
-      db.get(sql, params, (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(row as T | undefined);
-        }
+    if (isTurso) {
+      return (async () => {
+        const res = await libsqlClient.execute({ sql, args: params });
+        if (res.rows.length === 0) return undefined;
+        return res.rows[0] as unknown as T;
+      })();
+    } else {
+      return new Promise((resolve, reject) => {
+        db.get(sql, params, (err: any, row: any) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(row as T | undefined);
+          }
+        });
       });
-    });
+    }
   },
   all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
-    return new Promise((resolve, reject) => {
-      db.all(sql, params, (err, rows) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows as T[]);
-        }
+    if (isTurso) {
+      return (async () => {
+        const res = await libsqlClient.execute({ sql, args: params });
+        return res.rows as unknown as T[];
+      })();
+    } else {
+      return new Promise((resolve, reject) => {
+        db.all(sql, params, (err: any, rows: any) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(rows as T[]);
+          }
+        });
       });
-    });
+    }
   },
   exec(sql: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      db.exec(sql, (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
+    if (isTurso) {
+      return libsqlClient.executeMultiple(sql);
+    } else {
+      return new Promise((resolve, reject) => {
+        db.exec(sql, (err: any) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve();
+          }
+        });
       });
-    });
+    }
   }
 };
 
