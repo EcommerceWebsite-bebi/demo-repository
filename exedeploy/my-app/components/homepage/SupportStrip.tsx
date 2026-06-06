@@ -6,7 +6,7 @@ export default function SupportStrip() {
       <div className="flex items-center gap-4">
         <span className="material-symbols-outlined text-3xl">phone_in_talk</span>
         <span className="text-2xl font-semibold">Hỗ trợ / Mua hàng :</span>
-        <span className="text-2xl font-semibold text-red-400">0932198848</span>
+        <span className="text-2xl font-semibold text-red-400">0987339229</span>
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ export default function Footer() {
         <div>
           <h4 className="text-xs font-semibold uppercase mb-6">Liên hệ</h4>
           <ul className="space-y-4 text-sm text-gray-600">
-            <li>Email: hello@bibebebihihi.com</li>
+            <li>Email: conchuotnhat@gmail.com</li>
             <li>Team: Spider Man and Girl</li>
           </ul>
         </div>
