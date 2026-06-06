@@ -306,11 +306,11 @@ export async function initializeDatabase() {
     // Run migration alter queries to add coupon columns to orders table if they are missing
     try {
       await query.run('ALTER TABLE orders ADD COLUMN coupon_code TEXT');
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       await query.run('ALTER TABLE orders ADD COLUMN discount_amount DECIMAL(10,2) DEFAULT 0');
-    } catch (e) {}
+    } catch (e) { }
 
     // Seeding default coupons
     const couponsCount = await query.get<{ count: number }>('SELECT COUNT(*) as count FROM coupons');
