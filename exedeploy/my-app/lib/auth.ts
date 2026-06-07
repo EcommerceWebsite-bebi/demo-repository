@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { query } from './db';
 import { NextResponse } from 'next/server';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey12345';
+const JWT_SECRET = process.env.JWT_SECRET || 'một_chuỗi_ký_tự_bí_mật_bất_kỳ';
 
 export interface AuthenticatedUser {
   id: number;

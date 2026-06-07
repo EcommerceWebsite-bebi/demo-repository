@@ -33,7 +33,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="text-xs text-gray-500">© 2026 Bí Be Bé Bi Hihi. All rights reserved.</div>
+        <div className="text-xs text-gray-500">© 2026 team dev con chuot nhat. All rights reserved.</div>
         <div className="flex gap-8">
           <a className="opacity-80 hover:opacity-100" href="#"><span className="material-symbols-outlined">social_leaderboard</span></a>
           <a className="opacity-80 hover:opacity-100" href="#"><span className="material-symbols-outlined">retweet</span></a>

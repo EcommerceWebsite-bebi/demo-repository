@@ -9,7 +9,10 @@ interface RunResult {
   changes: number;
 }
 
-const isTurso = !!process.env.TURSO_DATABASE_URL;
+const TURSO_DATABASE_URL = process.env.TURSO_DATABASE_URL || 'libsql://1-binh123456789.aws-eu-west-1.turso.io';
+const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJleHAiOjE3ODYwMTI2MzQsImlhdCI6MTc4MDgyODYzNCwiaWQiOiIwMTllYTFhMC0wODAxLTc1NGYtOGZjNi0wZTZiM2FmNDlhOTIiLCJyaWQiOiI1YzM4ZGU4Yy1hZmIwLTRhMTEtOTg4ZS05OTM0MTk1NDMyZmQifQ.e_rmJU_79n9D291a0i9XI7GuNIvghtSd3JVKui7T2Y760dq5zPe3XQztIZ4KF6yOOT6bCdFi1yM981pgCQJyDA';
+
+const isTurso = !!TURSO_DATABASE_URL;
 
 export let db: any = null;
 let libsqlClient: any = null;
@@ -91,10 +94,10 @@ export const query = {
 };
 
 if (isTurso) {
-  console.log('Connecting to Turso Cloud SQLite database at:', process.env.TURSO_DATABASE_URL);
+  console.log('Connecting to Turso Cloud SQLite database at:', TURSO_DATABASE_URL);
   libsqlClient = createClient({
-    url: process.env.TURSO_DATABASE_URL!,
-    authToken: process.env.TURSO_AUTH_TOKEN,
+    url: TURSO_DATABASE_URL,
+    authToken: TURSO_AUTH_TOKEN,
   });
 
   // Auto-initialize Turso database asynchronously

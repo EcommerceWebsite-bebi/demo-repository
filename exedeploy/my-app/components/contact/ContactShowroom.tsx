@@ -24,7 +24,7 @@ const SHOPS: Record<CityKey, ShopInfo> = {
 		address:
 			"Lot E2a-7, D1 Street, Saigon Hi-Tech Park, Tang Nhon Phu Ward, HCMC",
 		hours: "9h00 - 22h00",
-		phone: "0932198848",
+		phone: "0987339229",
 		mapsUrl:
 			"https://www.google.com/maps/dir/?api=1&destination=Lot+E2a-7+D1+Street+Saigon+Hi-Tech+Park+Thu+Duc+HCMC",
 	},
