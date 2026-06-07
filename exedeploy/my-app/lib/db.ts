@@ -103,7 +103,31 @@ if (isTurso) {
   });
 } else {
   const sqlite3 = sqlite3Init.verbose();
-  const dbPath = path.resolve(process.cwd(), process.env.DB_PATH || 'backend/tshirt_shop.sqlite');
+  
+  // Detect Vercel deployment environment
+  const isVercel = !!process.env.VERCEL;
+  let dbPath = path.resolve(process.cwd(), process.env.DB_PATH || 'backend/tshirt_shop.sqlite');
+
+  if (isVercel) {
+    const vercelDbPath = '/tmp/tshirt_shop.sqlite';
+    console.log('Detected Vercel environment. Checking /tmp/tshirt_shop.sqlite...');
+    try {
+      if (!fs.existsSync(vercelDbPath)) {
+        if (fs.existsSync(dbPath)) {
+          fs.copyFileSync(dbPath, vercelDbPath);
+          console.log('Successfully copied SQLite database to /tmp/tshirt_shop.sqlite');
+        } else {
+          console.log('Source database not found at:', dbPath);
+        }
+      } else {
+        console.log('Database already exists at /tmp/tshirt_shop.sqlite');
+      }
+      dbPath = vercelDbPath;
+    } catch (err) {
+      console.error('Failed to copy database to /tmp:', err);
+    }
+  }
+
   console.log('Connecting to local SQLite database at:', dbPath);
 
   // Ensure the directory for the SQLite file exists
@@ -127,8 +151,10 @@ if (isTurso) {
 // Initialize and Setup Database Schema & Seed Data
 export async function initializeDatabase() {
   try {
-    // Enable Foreign Key support in SQLite
-    await query.run('PRAGMA foreign_keys = ON');
+    // Enable Foreign Key support in SQLite (local only, remote Turso does not support PRAGMA)
+    if (!isTurso) {
+      await query.run('PRAGMA foreign_keys = ON');
+    }
 
     // Create tables if they don't exist
     await query.run(`

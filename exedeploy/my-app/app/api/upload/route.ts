@@ -17,12 +17,22 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to Cloudinary directly as stream/buffer
-    const secureUrl = await uploadToCloudinary(buffer, 'tshirt_shop_custom_designs');
+    // Upload to Cloudinary directly if credentials exist, otherwise fallback to Base64 data URL
+    let secureUrl = '';
+    let message = '';
+
+    if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+      secureUrl = await uploadToCloudinary(buffer, 'tshirt_shop_custom_designs');
+      message = 'Tải ảnh lên Cloudinary thành công!';
+    } else {
+      const mimeType = file.type || 'image/png';
+      secureUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+      message = 'Tải ảnh thành công dạng Base64 (Demo Mode)!';
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Tải ảnh lên Cloudinary thành công!',
+      message,
       imageUrl: secureUrl
     });
 
