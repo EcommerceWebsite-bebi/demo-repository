@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '@/lib/db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretjwtkey12345';
+const JWT_SECRET = process.env.JWT_SECRET || 'một_chuỗi_ký_tự_bí_mật_bất_kỳ';
 
 const generateToken = (id: number) => {
   return jwt.sign({ id }, JWT_SECRET, {
