@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server';
+import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-// Khởi tạo biến đếm toàn cục (in-memory global variable) nếu chưa tồn tại
-if (!(global as any).visitorCount) {
-  (global as any).visitorCount = 125; 
-}
-
 export async function GET() {
   try {
+    let visitor = await query.get<{ count: number }>('SELECT count FROM visitor_stats WHERE id = 1');
+    
+    if (!visitor) {
+      await query.run('INSERT INTO visitor_stats (id, count) VALUES (1, 125)');
+      visitor = { count: 125 };
+    }
+
     return NextResponse.json(
-      { success: true, count: (global as any).visitorCount },
+      { success: true, count: visitor.count },
       {
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
