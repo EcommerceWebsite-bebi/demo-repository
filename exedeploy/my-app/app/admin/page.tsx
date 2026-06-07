@@ -226,7 +226,7 @@ export default function AdminPage() {
   // Check user is Admin
   const isAdmin = useMemo(() => {
     if (!user) return false;
-    return user.role_id === 1 || 
+    return user.role_id === 2 || 
            user.username?.toLowerCase() === "admin" || 
            user.email?.toLowerCase().includes("admin");
   }, [user]);

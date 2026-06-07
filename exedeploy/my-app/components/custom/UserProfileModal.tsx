@@ -141,7 +141,7 @@ export default function UserProfileModal() {
 
               {/* Logout & Admin buttons */}
               <div className="pt-4 flex justify-end items-center">
-                {!!(user && (user.role_id === 1 || user.username?.toLowerCase() === "admin" || user.email?.toLowerCase().includes("admin"))) && (
+                {!!(user && (user.role_id === 2 || user.username?.toLowerCase() === "admin" || user.email?.toLowerCase().includes("admin"))) && (
                   <Link
                     href="/admin"
                     onClick={() => setIsProfileOpen(false)}

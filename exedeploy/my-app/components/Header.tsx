@@ -8,7 +8,7 @@ export default function Header() {
   const pathname = usePathname();
   const { user, cart, setIsCartOpen, setIsAuthOpen, setIsProfileOpen } = useApp();
 
-  const isAdmin = !!(user && (user.role_id === 1 || user.username?.toLowerCase() === "admin" || user.email?.toLowerCase().includes("admin")));
+  const isAdmin = !!(user && (user.role_id === 2 || user.username?.toLowerCase() === "admin" || user.email?.toLowerCase().includes("admin")));
 
   const navItems = [
     { href: "/shop", label: "SHOP" },

@@ -447,17 +447,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!token) return { success: false, message: "Please log in to checkout" };
 
     try {
+      const formattedItems = cart.items.map(item => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        size: item.size,
+        color: item.color,
+        custom_design_image: null
+      }));
+
       const res = await fetch(`${API_URL}/api/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ shipping_address, phone, note, coupon_code }),
+        body: JSON.stringify({ 
+          shipping_address, 
+          phone, 
+          note, 
+          coupon_code,
+          items: formattedItems
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setCart({ items: [], total_price: 0 });
+        localStorage.removeItem("local_cart");
         await fetchOrdersInternal(token);
         fetchProductsInternal(); // Refresh stock counts
         return { success: true, order: data.order };
@@ -631,25 +646,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setProducts(prev => [data.product, ...prev]);
         return { success: true, product: data.product };
       }
-      
-      const category = categories.find(c => c.id === productData.category_id);
-      const newProduct: Product = {
-        ...productData,
-        id: Math.max(...products.map(p => p.id), 0) + 1,
-        category_name: category ? category.name : "Uncategorized",
-      };
-      setProducts(prev => [newProduct, ...prev]);
-      return { success: true, message: "Added locally (backend mock fallback)", product: newProduct };
+      return { success: false, message: data.message || "Thêm sản phẩm thất bại" };
     } catch (e) {
       console.error("Add product error:", e);
-      const category = categories.find(c => c.id === productData.category_id);
-      const newProduct: Product = {
-        ...productData,
-        id: Math.max(...products.map(p => p.id), 0) + 1,
-        category_name: category ? category.name : "Uncategorized",
-      };
-      setProducts(prev => [newProduct, ...prev]);
-      return { success: true, message: "Added locally (network error fallback)", product: newProduct };
+      return { success: false, message: "Lỗi kết nối máy chủ hoặc lỗi cơ sở dữ liệu" };
     }
   }
 
@@ -669,33 +669,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setProducts(prev => prev.map(p => p.id === id ? data.product : p));
         return { success: true, product: data.product };
       }
-      
-      setProducts(prev => prev.map(p => {
-        if (p.id === id) {
-          const category = productData.category_id ? categories.find(c => c.id === productData.category_id) : null;
-          return {
-            ...p,
-            ...productData,
-            category_name: category ? category.name : p.category_name,
-          };
-        }
-        return p;
-      }));
-      return { success: true, message: "Updated locally (backend mock fallback)" };
+      return { success: false, message: data.message || "Cập nhật sản phẩm thất bại" };
     } catch (e) {
       console.error("Update product error:", e);
-      setProducts(prev => prev.map(p => {
-        if (p.id === id) {
-          const category = productData.category_id ? categories.find(c => c.id === productData.category_id) : null;
-          return {
-            ...p,
-            ...productData,
-            category_name: category ? category.name : p.category_name,
-          };
-        }
-        return p;
-      }));
-      return { success: true, message: "Updated locally (network error fallback)" };
+      return { success: false, message: "Lỗi kết nối máy chủ hoặc lỗi cơ sở dữ liệu" };
     }
   }
 
@@ -713,13 +690,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setProducts(prev => prev.filter(p => p.id !== id));
         return { success: true };
       }
-      
-      setProducts(prev => prev.filter(p => p.id !== id));
-      return { success: true, message: "Deleted locally (backend mock fallback)" };
+      return { success: false, message: data.message || "Xóa sản phẩm thất bại" };
     } catch (e) {
       console.error("Delete product error:", e);
-      setProducts(prev => prev.filter(p => p.id !== id));
-      return { success: true, message: "Deleted locally (network error fallback)" };
+      return { success: false, message: "Lỗi kết nối máy chủ hoặc lỗi cơ sở dữ liệu" };
     }
   }
 
@@ -740,13 +714,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setOrders(prev => prev.map(o => o.id === id ? { ...o, status_name: statusName, status_id: statusId } : o));
         return { success: true };
       }
-      
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, status_name: statusName, status_id: statusId } : o));
-      return { success: true, message: data.message || "Updated status locally (backend mock fallback)" };
+      return { success: false, message: data.message || "Cập nhật trạng thái đơn hàng thất bại" };
     } catch (e) {
       console.error("Update order status error:", e);
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, status_name: statusName, status_id: getStatusIdByName(statusName) } : o));
-      return { success: true, message: "Updated status locally (network error fallback)" };
+      return { success: false, message: "Lỗi kết nối máy chủ hoặc lỗi cơ sở dữ liệu" };
     }
   }
 
