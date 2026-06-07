@@ -162,7 +162,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async function init() {
       setIsLoading(true);
       const storedToken = localStorage.getItem("token");
-      
+
       // Load products & categories first
       await Promise.all([fetchProductsInternal(), fetchCategoriesInternal()]);
 
@@ -266,8 +266,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Internal: Fetch cart
   async function fetchCartInternal(authToken: string) {
-    // Luôn tải giỏ hàng từ localStorage để tránh lỗi ghi file SQLite trên Vercel
-    loadLocalCart();
+    try {
+      const res = await fetch(`${API_URL}/api/cart`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      const data = await res.json();
+      if (data.success && data.cart) {
+        setCart({
+          items: data.cart.items,
+          total_price: data.cart.total_price
+        });
+      } else {
+        loadLocalCart();
+      }
+    } catch (e) {
+      console.error("Fetch cart error:", e);
+      loadLocalCart();
+    }
+  }
+
+  // Helper to sync localStorage guest cart to database upon login/register
+  async function syncLocalCartToDatabase(authToken: string) {
+    try {
+      const storedCart = localStorage.getItem("local_cart");
+      if (storedCart) {
+        const parsed = JSON.parse(storedCart);
+        if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+          for (const item of parsed.items) {
+            await fetch(`${API_URL}/api/cart/items`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({
+                product_id: item.product_id,
+                quantity: item.quantity,
+                size: item.size,
+                color: item.color
+              }),
+            });
+          }
+          localStorage.removeItem("local_cart");
+        }
+      }
+    } catch (e) {
+      console.error("Sync local cart to database error:", e);
+    }
   }
 
   // Internal: Fetch orders
@@ -326,8 +373,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("token", data.token);
         setToken(data.token);
         setUser(data.user);
-        
+
         // Sync cart
+        await syncLocalCartToDatabase(data.token);
         await fetchCartInternal(data.token);
         fetchOrdersInternal(data.token);
         return { success: true };
@@ -352,8 +400,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("token", data.token);
         setToken(data.token);
         setUser(data.user);
-        
-        // Load clean database cart
+
+        // Sync cart
+        await syncLocalCartToDatabase(data.token);
         await fetchCartInternal(data.token);
         setOrders([]);
         return { success: true };
@@ -380,7 +429,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
 
-    // Luôn sử dụng Local Storage Cart để hoạt động ổn định trên Vercel (bỏ qua ghi DB)
+    if (token) {
+      try {
+        const res = await fetch(`${API_URL}/api/cart/items`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ product_id: productId, quantity, size, color }),
+        });
+        const data = await res.json();
+        if (data.success && data.cart) {
+          setCart({
+            items: data.cart.items,
+            total_price: data.cart.total_price
+          });
+          return;
+        }
+      } catch (e) {
+        console.error("Add to cart database error, falling back to local:", e);
+      }
+    }
+
+    // Local Storage Cart fallback (guest cart or network error fallback)
     const currentItems = [...cart.items];
     const existingIdx = currentItems.findIndex(
       (item) =>
@@ -414,7 +486,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Public: Update Quantity
   async function updateCartItem(itemId: number | string, quantity: number) {
-    // Luôn sử dụng Local Storage Cart để hoạt động ổn định trên Vercel (bỏ qua ghi DB)
+    if (token && (typeof itemId === "number" || (typeof itemId === "string" && !itemId.startsWith("local-")))) {
+      try {
+        const res = await fetch(`${API_URL}/api/cart/items/${itemId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ quantity }),
+        });
+        const data = await res.json();
+        if (data.success && data.cart) {
+          setCart({
+            items: data.cart.items,
+            total_price: data.cart.total_price
+          });
+          return;
+        }
+      } catch (e) {
+        console.error("Update cart item database error, falling back to local:", e);
+      }
+    }
+
+    // Local Storage Cart fallback
     let currentItems = [...cart.items];
     const idx = currentItems.findIndex((item) => item.id === itemId);
     if (idx > -1) {
@@ -433,7 +528,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Public: Remove Item
   async function removeCartItem(itemId: number | string) {
-    // Luôn sử dụng Local Storage Cart để hoạt động ổn định trên Vercel (bỏ qua ghi DB)
+    if (token && (typeof itemId === "number" || (typeof itemId === "string" && !itemId.startsWith("local-")))) {
+      try {
+        const res = await fetch(`${API_URL}/api/cart/items/${itemId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (data.success) {
+          await fetchCartInternal(token);
+          return;
+        }
+      } catch (e) {
+        console.error("Remove cart item database error, falling back to local:", e);
+      }
+    }
+
+    // Local Storage Cart fallback
     const currentItems = cart.items.filter((item) => item.id !== itemId);
     const total = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     saveLocalCart({
@@ -461,10 +574,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ 
-          shipping_address, 
-          phone, 
-          note, 
+        body: JSON.stringify({
+          shipping_address,
+          phone,
+          note,
           coupon_code,
           items: formattedItems
         }),
@@ -473,6 +586,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (data.success) {
         setCart({ items: [], total_price: 0 });
         localStorage.removeItem("local_cart");
+
+        // Clear database cart if logged in
+        if (token) {
+          try {
+            await fetch(`${API_URL}/api/cart`, {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+          } catch (e) {
+            console.error("Clear database cart error after checkout:", e);
+          }
+        }
+
         await fetchOrdersInternal(token);
         fetchProductsInternal(); // Refresh stock counts
         return { success: true, order: data.order };

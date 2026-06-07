@@ -14,40 +14,6 @@ const isTurso = !!process.env.TURSO_DATABASE_URL;
 export let db: any = null;
 let libsqlClient: any = null;
 
-if (isTurso) {
-  console.log('Connecting to Turso Cloud SQLite database at:', process.env.TURSO_DATABASE_URL);
-  libsqlClient = createClient({
-    url: process.env.TURSO_DATABASE_URL!,
-    authToken: process.env.TURSO_AUTH_TOKEN,
-  });
-
-  // Auto-initialize Turso database asynchronously
-  initializeDatabase().catch((error) => {
-    console.error('Error auto-initializing Turso database:', error);
-  });
-} else {
-  const sqlite3 = sqlite3Init.verbose();
-  const dbPath = path.resolve(process.cwd(), process.env.DB_PATH || 'backend/tshirt_shop.sqlite');
-  console.log('Connecting to local SQLite database at:', dbPath);
-
-  // Ensure the directory for the SQLite file exists
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
-
-  db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      console.error('Error opening SQLite database:', err.message);
-    } else {
-      console.log('Connected to SQLite database successfully.');
-      initializeDatabase().catch((error) => {
-        console.error('Error auto-initializing database:', error);
-      });
-    }
-  });
-}
-
 export const query = {
   run(sql: string, params: any[] = []): Promise<RunResult> {
     if (isTurso) {
@@ -123,6 +89,40 @@ export const query = {
     }
   }
 };
+
+if (isTurso) {
+  console.log('Connecting to Turso Cloud SQLite database at:', process.env.TURSO_DATABASE_URL);
+  libsqlClient = createClient({
+    url: process.env.TURSO_DATABASE_URL!,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
+
+  // Auto-initialize Turso database asynchronously
+  initializeDatabase().catch((error) => {
+    console.error('Error auto-initializing Turso database:', error);
+  });
+} else {
+  const sqlite3 = sqlite3Init.verbose();
+  const dbPath = path.resolve(process.cwd(), process.env.DB_PATH || 'backend/tshirt_shop.sqlite');
+  console.log('Connecting to local SQLite database at:', dbPath);
+
+  // Ensure the directory for the SQLite file exists
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+
+  db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error('Error opening SQLite database:', err.message);
+    } else {
+      console.log('Connected to SQLite database successfully.');
+      initializeDatabase().catch((error) => {
+        console.error('Error auto-initializing database:', error);
+      });
+    }
+  });
+}
 
 // Initialize and Setup Database Schema & Seed Data
 export async function initializeDatabase() {
