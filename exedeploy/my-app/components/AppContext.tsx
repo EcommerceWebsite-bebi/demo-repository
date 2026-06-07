@@ -184,8 +184,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Track session visitor
       if (typeof window !== "undefined" && !sessionStorage.getItem("visited")) {
         try {
-          await fetch(`${API_URL}/api/visitors/increment`, { method: "POST" });
-          sessionStorage.setItem("visited", "true");
+          const res = await fetch(`${API_URL}/api/visitors/increment`, { method: "POST" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+              sessionStorage.setItem("visited", "true");
+            }
+          }
         } catch (e) {
           console.error("Increment visitor error:", e);
         }

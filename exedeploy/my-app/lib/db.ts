@@ -18,15 +18,14 @@ export let db: any = null;
 let libsqlClient: any = null;
 
 export const query = {
-  run(sql: string, params: any[] = []): Promise<RunResult> {
+  async run(sql: string, params: any[] = []): Promise<RunResult> {
+    await initializeDatabase();
     if (isTurso) {
-      return (async () => {
-        const res = await libsqlClient.execute({ sql, args: params });
-        return {
-          id: res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : 0,
-          changes: res.rowsAffected
-        };
-      })();
+      const res = await libsqlClient.execute({ sql, args: params });
+      return {
+        id: res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : 0,
+        changes: res.rowsAffected
+      };
     } else {
       return new Promise((resolve, reject) => {
         db.run(sql, params, function (this: any, err: any) {
@@ -39,13 +38,12 @@ export const query = {
       });
     }
   },
-  get<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
+  async get<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
+    await initializeDatabase();
     if (isTurso) {
-      return (async () => {
-        const res = await libsqlClient.execute({ sql, args: params });
-        if (res.rows.length === 0) return undefined;
-        return res.rows[0] as unknown as T;
-      })();
+      const res = await libsqlClient.execute({ sql, args: params });
+      if (res.rows.length === 0) return undefined;
+      return res.rows[0] as unknown as T;
     } else {
       return new Promise((resolve, reject) => {
         db.get(sql, params, (err: any, row: any) => {
@@ -58,12 +56,11 @@ export const query = {
       });
     }
   },
-  all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+  async all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+    await initializeDatabase();
     if (isTurso) {
-      return (async () => {
-        const res = await libsqlClient.execute({ sql, args: params });
-        return res.rows as unknown as T[];
-      })();
+      const res = await libsqlClient.execute({ sql, args: params });
+      return res.rows as unknown as T[];
     } else {
       return new Promise((resolve, reject) => {
         db.all(sql, params, (err: any, rows: any) => {
@@ -76,9 +73,10 @@ export const query = {
       });
     }
   },
-  exec(sql: string): Promise<void> {
+  async exec(sql: string): Promise<void> {
+    await initializeDatabase();
     if (isTurso) {
-      return libsqlClient.executeMultiple(sql);
+      await libsqlClient.executeMultiple(sql);
     } else {
       return new Promise((resolve, reject) => {
         db.exec(sql, (err: any) => {
@@ -93,66 +91,27 @@ export const query = {
   }
 };
 
-if (isTurso) {
-  console.log('Connecting to Turso Cloud SQLite database at:', TURSO_DATABASE_URL);
-  libsqlClient = createClient({
-    url: TURSO_DATABASE_URL,
-    authToken: TURSO_AUTH_TOKEN,
-  });
 
-  // Auto-initialize Turso database asynchronously
-  initializeDatabase().catch((error) => {
-    console.error('Error auto-initializing Turso database:', error);
-  });
-} else {
-  const sqlite3 = sqlite3Init.verbose();
-  
-  // Detect Vercel deployment environment
-  const isVercel = !!process.env.VERCEL;
-  let dbPath = path.resolve(process.cwd(), process.env.DB_PATH || 'backend/tshirt_shop.sqlite');
-
-  if (isVercel) {
-    const vercelDbPath = '/tmp/tshirt_shop.sqlite';
-    console.log('Detected Vercel environment. Checking /tmp/tshirt_shop.sqlite...');
-    try {
-      if (!fs.existsSync(vercelDbPath)) {
-        if (fs.existsSync(dbPath)) {
-          fs.copyFileSync(dbPath, vercelDbPath);
-          console.log('Successfully copied SQLite database to /tmp/tshirt_shop.sqlite');
-        } else {
-          console.log('Source database not found at:', dbPath);
-        }
-      } else {
-        console.log('Database already exists at /tmp/tshirt_shop.sqlite');
-      }
-      dbPath = vercelDbPath;
-    } catch (err) {
-      console.error('Failed to copy database to /tmp:', err);
-    }
-  }
-
-  console.log('Connecting to local SQLite database at:', dbPath);
-
-  // Ensure the directory for the SQLite file exists
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
-
-  db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      console.error('Error opening SQLite database:', err.message);
-    } else {
-      console.log('Connected to SQLite database successfully.');
-      initializeDatabase().catch((error) => {
-        console.error('Error auto-initializing database:', error);
-      });
-    }
-  });
-}
+let isInitializing = false;
+let initializationPromise: Promise<void> | null = null;
 
 // Initialize and Setup Database Schema & Seed Data
 export async function initializeDatabase() {
+  if (isInitializing) return;
+  if (!initializationPromise) {
+    isInitializing = true;
+    initializationPromise = (async () => {
+      try {
+        await runDatabaseInitialization();
+      } finally {
+        isInitializing = false;
+      }
+    })();
+  }
+  return initializationPromise;
+}
+
+async function runDatabaseInitialization() {
   try {
     // Enable Foreign Key support in SQLite (local only, remote Turso does not support PRAGMA)
     if (!isTurso) {
@@ -449,4 +408,62 @@ export async function initializeDatabase() {
   } catch (error) {
     console.error('Error during database initialization:', error);
   }
+}
+
+if (isTurso) {
+  console.log('Connecting to Turso Cloud SQLite database at:', TURSO_DATABASE_URL);
+  libsqlClient = createClient({
+    url: TURSO_DATABASE_URL,
+    authToken: TURSO_AUTH_TOKEN,
+  });
+
+  // Auto-initialize Turso database asynchronously
+  initializeDatabase().catch((error) => {
+    console.error('Error auto-initializing Turso database:', error);
+  });
+} else {
+  const sqlite3 = sqlite3Init.verbose();
+  
+  // Detect Vercel deployment environment
+  const isVercel = !!process.env.VERCEL;
+  let dbPath = path.resolve(process.cwd(), process.env.DB_PATH || 'backend/tshirt_shop.sqlite');
+
+  if (isVercel) {
+    const vercelDbPath = '/tmp/tshirt_shop.sqlite';
+    console.log('Detected Vercel environment. Checking /tmp/tshirt_shop.sqlite...');
+    try {
+      if (!fs.existsSync(vercelDbPath)) {
+        if (fs.existsSync(dbPath)) {
+          fs.copyFileSync(dbPath, vercelDbPath);
+          console.log('Successfully copied SQLite database to /tmp/tshirt_shop.sqlite');
+        } else {
+          console.log('Source database not found at:', dbPath);
+        }
+      } else {
+        console.log('Database already exists at /tmp/tshirt_shop.sqlite');
+      }
+      dbPath = vercelDbPath;
+    } catch (err) {
+      console.error('Failed to copy database to /tmp:', err);
+    }
+  }
+
+  console.log('Connecting to local SQLite database at:', dbPath);
+
+  // Ensure the directory for the SQLite file exists
+  const dbDir = path.dirname(dbPath);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+
+  db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error('Error opening SQLite database:', err.message);
+    } else {
+      console.log('Connected to SQLite database successfully.');
+      initializeDatabase().catch((error) => {
+        console.error('Error auto-initializing database:', error);
+      });
+    }
+  });
 }
