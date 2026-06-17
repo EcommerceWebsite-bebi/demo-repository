@@ -9,7 +9,8 @@ export default function ProductGrid() {
 	const displayProducts = products.slice(0, 8).map((p) => ({
 		id: p.id.toString(),
 		title: p.name,
-		price: `${p.price.toLocaleString('vi-VN')} đ`,
+		price: p.price,
+		discount_price: p.discount_price,
 		img: p.image || "https://res.cloudinary.com/demo/image/upload/sample.jpg",
 		tag: p.is_customizable === 1 ? "Custom" : undefined,
 		raw: p,
@@ -33,6 +34,7 @@ export default function ProductGrid() {
 							<ProductCard
 								title={p.title}
 								price={p.price}
+								discount_price={p.discount_price}
 								img={p.img}
 								tag={p.tag}
 							/>

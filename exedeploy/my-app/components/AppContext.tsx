@@ -9,8 +9,10 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  discount_price?: number | null;
   stock: number;
   image: string;
+  images?: string[];
   category_id: number;
   category_name?: string;
   is_customizable: number;
@@ -469,6 +471,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (existingIdx > -1) {
       currentItems[existingIdx].quantity += quantity;
     } else {
+      const activePrice = (product.discount_price !== null && product.discount_price !== undefined && product.discount_price < product.price)
+        ? product.discount_price
+        : product.price;
+
       currentItems.push({
         id: `local-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         product_id: productId,
@@ -476,7 +482,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         size,
         color,
         name: product.name,
-        price: product.price,
+        price: activePrice,
         image: product.image,
         is_customizable: product.is_customizable,
       });

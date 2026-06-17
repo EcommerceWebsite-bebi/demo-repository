@@ -206,11 +206,14 @@ export async function POST(req: Request) {
         if (product.stock < item.quantity) {
           return NextResponse.json({ success: false, message: `Insufficient stock for product: ${product.name}` }, { status: 400 });
         }
+        const activePrice = (product.discount_price !== null && product.discount_price !== undefined && product.discount_price < product.price)
+          ? product.discount_price
+          : product.price;
         orderItemsToCreate.push({
           product_id: product.id,
           product_name: product.name,
           quantity: item.quantity,
-          price: product.price,
+          price: activePrice,
           size: item.size || null,
           color: item.color || null,
           custom_design_image: item.custom_design_image || null
@@ -226,7 +229,7 @@ export async function POST(req: Request) {
       cartId = cart.id;
 
       const cartItems = await query.all<any>(`
-        SELECT ci.*, p.name, p.price, p.stock
+        SELECT ci.*, p.name, p.price, p.discount_price, p.stock
         FROM cart_items ci
         INNER JOIN products p ON ci.product_id = p.id
         WHERE ci.cart_id = ?
@@ -240,11 +243,14 @@ export async function POST(req: Request) {
         if (item.stock < item.quantity) {
           return NextResponse.json({ success: false, message: `Insufficient stock for product: ${item.name}` }, { status: 400 });
         }
+        const activePrice = (item.discount_price !== null && item.discount_price !== undefined && item.discount_price < item.price)
+          ? item.discount_price
+          : item.price;
         orderItemsToCreate.push({
           product_id: item.product_id,
           product_name: item.name,
           quantity: item.quantity,
-          price: item.price,
+          price: activePrice,
           size: item.size || null,
           color: item.color || null,
           custom_design_image: null

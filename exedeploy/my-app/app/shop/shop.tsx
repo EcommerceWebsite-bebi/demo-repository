@@ -13,7 +13,8 @@ import { useApp, Product } from "../../components/AppContext";
 interface ShopProduct {
 	id: string;
 	title: string;
-	price: string;
+	price: number;
+	discount_price?: number | null;
 	img: string;
 	tag?: string;
 	style?: string;
@@ -41,7 +42,8 @@ export default function ShopPage() {
 		return products.map((p) => ({
 			id: p.id.toString(),
 			title: p.name,
-			price: `${p.price.toLocaleString('vi-VN')} đ`,
+			price: p.price,
+			discount_price: p.discount_price,
 			img: p.image || "https://res.cloudinary.com/demo/image/upload/sample.jpg",
 			tag: p.is_customizable === 1 ? "Custom" : undefined,
 			style: p.category_name,
@@ -60,14 +62,18 @@ export default function ShopPage() {
 			if (isRange) {
 				const [min, max] = filters.price.split("-").map(part => parseFloat(part.replace(/[^0-9]/g, "")));
 				result = result.filter((p) => {
-					const price = parseFloat(p.price.replace(/[^0-9]/g, ""));
-					return price >= min && price <= max;
+					const activePrice = (p.discount_price !== null && p.discount_price !== undefined && p.discount_price < p.price)
+						? p.discount_price
+						: p.price;
+					return activePrice >= min && activePrice <= max;
 				});
 			} else if (isMin) {
 				const min = parseFloat(filters.price.replace(/[^0-9]/g, ""));
 				result = result.filter((p) => {
-					const price = parseFloat(p.price.replace(/[^0-9]/g, ""));
-					return price >= min;
+					const activePrice = (p.discount_price !== null && p.discount_price !== undefined && p.discount_price < p.price)
+						? p.discount_price
+						: p.price;
+					return activePrice >= min;
 				});
 			}
 		}
@@ -85,15 +91,15 @@ export default function ShopPage() {
 
 		if (sort === "price-asc") {
 			result.sort((a, b) => {
-				const pa = parseFloat(a.price.replace(/[^0-9]/g, ""));
-				const pb = parseFloat(b.price.replace(/[^0-9]/g, ""));
+				const pa = (a.discount_price !== null && a.discount_price !== undefined && a.discount_price < a.price) ? a.discount_price : a.price;
+				const pb = (b.discount_price !== null && b.discount_price !== undefined && b.discount_price < b.price) ? b.discount_price : b.price;
 				return pa - pb;
 			});
 		}
 		if (sort === "price-desc") {
 			result.sort((a, b) => {
-				const pa = parseFloat(a.price.replace(/[^0-9]/g, ""));
-				const pb = parseFloat(b.price.replace(/[^0-9]/g, ""));
+				const pa = (a.discount_price !== null && a.discount_price !== undefined && a.discount_price < a.price) ? a.discount_price : a.price;
+				const pb = (b.discount_price !== null && b.discount_price !== undefined && b.discount_price < b.price) ? b.discount_price : b.price;
 				return pb - pa;
 			});
 		}

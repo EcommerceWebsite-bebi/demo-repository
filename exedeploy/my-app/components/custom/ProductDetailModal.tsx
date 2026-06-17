@@ -28,6 +28,7 @@ export default function ProductDetailModal() {
   const [submittingReview, setSubmittingReview] = useState(false);
 
   const [currentId, setCurrentId] = useState<number | null>(null);
+  const [activeImage, setActiveImage] = useState<string | null>(null);
 
   // Reset states and fetch reviews when active product changes
   useEffect(() => {
@@ -39,15 +40,20 @@ export default function ProductDetailModal() {
       setReviewError(null);
       setComment("");
       setRating(5);
+      setActiveImage(activeProductDetail.image || null);
 
       // Async fetch full product info with reviews
       fetchProductById(activeProductDetail.id).then((freshProduct) => {
         if (freshProduct && freshProduct.id === activeProductDetail.id) {
           setActiveProductDetail(freshProduct);
+          if (freshProduct.image && !activeImage) {
+            setActiveImage(freshProduct.image);
+          }
         }
       });
     } else if (!activeProductDetail) {
       setCurrentId(null);
+      setActiveImage(null);
     }
   }, [activeProductDetail, currentId]);
 
@@ -115,10 +121,10 @@ export default function ProductDetailModal() {
         </button>
 
         {/* Left Side: Product Image & Details */}
-        <div className="w-full md:w-1/2 bg-gray-50 border-r border-gray-100 p-8 flex items-center justify-center min-h-[300px] md:min-h-0">
+        <div className="w-full md:w-1/2 bg-gray-50 border-r border-gray-100 p-8 flex flex-col items-center justify-center min-h-[300px] md:min-h-0 space-y-4">
           <div className="relative aspect-square w-full max-w-sm flex items-center justify-center">
             <img
-              src={product.image || "https://res.cloudinary.com/demo/image/upload/sample.jpg"}
+              src={activeImage || product.image || "https://res.cloudinary.com/demo/image/upload/sample.jpg"}
               alt={product.name}
               className="object-contain max-h-full max-w-full rounded-xl transition duration-500"
             />
@@ -128,6 +134,25 @@ export default function ProductDetailModal() {
               </span>
             )}
           </div>
+
+          {/* Thumbnails Gallery */}
+          {product.images && product.images.length > 1 && (
+            <div className="flex gap-2 flex-wrap justify-center max-w-sm">
+              {product.images.map((imgUrl, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActiveImage(imgUrl)}
+                  className={`w-12 h-12 rounded-lg border overflow-hidden p-0.5 transition ${
+                    (activeImage === imgUrl || (!activeImage && index === 0))
+                      ? "border-black ring-1 ring-black"
+                      : "border-gray-200 hover:border-gray-400"
+                  }`}
+                >
+                  <img src={imgUrl} alt={`${product.name} ${index + 1}`} className="w-full h-full object-cover rounded-md" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Side: Options & Checkout & Reviews - Scrollable */}
@@ -142,7 +167,23 @@ export default function ProductDetailModal() {
               <h2 className="text-2xl font-extrabold text-gray-950 mt-2">{product.name}</h2>
               
               <div className="flex items-center gap-4 mt-2">
-                <span className="text-xl font-extrabold text-gray-900">{product.price.toLocaleString('vi-VN')} đ</span>
+                {product.discount_price !== null && product.discount_price !== undefined && product.discount_price < product.price ? (
+                  <>
+                    <span className="text-xl font-extrabold text-red-600">
+                      {product.discount_price.toLocaleString('vi-VN')} đ
+                    </span>
+                    <span className="text-sm text-gray-400 line-through">
+                      {product.price.toLocaleString('vi-VN')} đ
+                    </span>
+                    <span className="text-xs font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded shadow-sm">
+                      -{Math.round(((product.price - product.discount_price) / product.price) * 100)}%
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-xl font-extrabold text-gray-900">
+                    {product.price.toLocaleString('vi-VN')} đ
+                  </span>
+                )}
                 <span className={`text-xs font-semibold ${isOutOfStock ? 'text-red-500 bg-red-50 px-2 py-0.5 rounded' : 'text-gray-500'}`}>
                   {isOutOfStock ? "Hết hàng" : `Kho còn: ${product.stock} sản phẩm`}
                 </span>

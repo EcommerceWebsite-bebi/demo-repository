@@ -23,20 +23,37 @@ export async function GET(req: Request) {
     // Get cart items joined with products
     const items = await query.all<any>(`
       SELECT ci.id, ci.product_id, ci.quantity, ci.size, ci.color,
-             p.name, p.price, p.image, p.is_customizable
+             p.name, p.price, p.discount_price, p.image, p.is_customizable
       FROM cart_items ci
       INNER JOIN products p ON ci.product_id = p.id
       WHERE ci.cart_id = ?
     `, [cartId]);
 
-    // Calculate total price of cart
-    const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Calculate total price of cart using active price
+    const totalPrice = items.reduce((sum, item) => {
+      const activePrice = (item.discount_price !== null && item.discount_price !== undefined && item.discount_price < item.price)
+        ? item.discount_price
+        : item.price;
+      return sum + (activePrice * item.quantity);
+    }, 0);
+
+    // Format output price for cart items to be the discounted price if valid
+    const formattedItems = items.map(item => {
+      const activePrice = (item.discount_price !== null && item.discount_price !== undefined && item.discount_price < item.price)
+        ? item.discount_price
+        : item.price;
+      return {
+        ...item,
+        price: activePrice,
+        original_price: item.price
+      };
+    });
 
     return NextResponse.json({
       success: true,
       cart: {
         id: cartId,
-        items,
+        items: formattedItems,
         total_price: parseFloat(totalPrice.toFixed(2))
       }
     });

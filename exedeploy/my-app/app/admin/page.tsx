@@ -63,8 +63,10 @@ export default function AdminPage() {
     name: "",
     description: "",
     price: 0,
+    discount_price: "" as string | number,
     stock: 0,
     image: "",
+    images: [] as string[],
     category_id: 1,
     is_customizable: 0,
     sizes: [] as string[],
@@ -238,7 +240,9 @@ export default function AdminPage() {
       ...prev,
       [name]: name === "price" || name === "stock" || name === "category_id" || name === "is_customizable" 
         ? Number(value) 
-        : value
+        : name === "discount_price"
+          ? (value === "" ? "" : Number(value))
+          : value
     }));
   };
 
@@ -275,6 +279,57 @@ export default function AdminPage() {
     }
   };
 
+  // Handle product multiple images upload
+  const handleProductMultipleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploadingImage(true);
+    const newImages = [...productForm.images];
+    let loadedCount = 0;
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append("image", file);
+
+        const response = await fetch(`${API_URL}/api/upload`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          newImages.push(data.imageUrl);
+          loadedCount++;
+        }
+      }
+      setProductForm(prev => ({
+        ...prev,
+        images: newImages
+      }));
+      if (loadedCount > 0) {
+        showNotification("success", `Tải thành công ${loadedCount} ảnh chi tiết!`);
+      } else {
+        showNotification("error", "Không tải được ảnh nào.");
+      }
+    } catch (error) {
+      console.error("Lỗi khi upload nhiều ảnh:", error);
+      showNotification("error", "Lỗi kết nối khi tải ảnh lên.");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  // Handle removing a thumbnail image
+  const handleRemoveImageThumbnail = (indexToRemove: number) => {
+    setProductForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, idx) => idx !== indexToRemove)
+    }));
+  };
+
   // Handle sizes checkbox toggle
   const handleSizeToggle = (size: string) => {
     setProductForm(prev => {
@@ -306,8 +361,10 @@ export default function AdminPage() {
       name: "",
       description: "",
       price: 150000,
+      discount_price: "",
       stock: 50,
       image: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=500&auto=format&fit=crop&q=60",
+      images: [],
       category_id: categories[0]?.id || 1,
       is_customizable: 0,
       sizes: ["S", "M", "L", "XL"],
@@ -323,8 +380,10 @@ export default function AdminPage() {
       name: product.name,
       description: product.description || "",
       price: product.price,
+      discount_price: product.discount_price !== undefined && product.discount_price !== null ? product.discount_price : "",
       stock: product.stock,
       image: product.image || "",
+      images: product.images || [],
       category_id: product.category_id || 1,
       is_customizable: product.is_customizable || 0,
       sizes: product.sizes || [],
@@ -339,9 +398,14 @@ export default function AdminPage() {
     setIsActionLoading(true);
     setActionMessage(null);
 
+    const payload = {
+      ...productForm,
+      discount_price: productForm.discount_price === "" || productForm.discount_price === null ? null : Number(productForm.discount_price)
+    };
+
     try {
       if (editingProduct) {
-        const res = await updateProduct(editingProduct.id, productForm);
+        const res = await updateProduct(editingProduct.id, payload);
         if (res.success) {
           showNotification("success", `Cập nhật sản phẩm "${productForm.name}" thành công!`);
           setIsProductModalOpen(false);
@@ -349,7 +413,7 @@ export default function AdminPage() {
           showNotification("error", res.message || "Cập nhật thất bại.");
         }
       } else {
-        const res = await addProduct(productForm);
+        const res = await addProduct(payload);
         if (res.success) {
           showNotification("success", `Thêm sản phẩm "${productForm.name}" thành công!`);
           setIsProductModalOpen(false);
@@ -1027,8 +1091,15 @@ export default function AdminPage() {
                             {p.category_name || "Mặc định"}
                           </td>
                           {/* Price */}
-                          <td className="px-5 py-4 font-bold text-white">
-                            {p.price.toLocaleString("vi-VN")} đ
+                          <td className="px-5 py-4 font-bold">
+                            {p.discount_price !== null && p.discount_price !== undefined && p.discount_price < p.price ? (
+                              <div className="flex flex-col">
+                                <span className="text-red-400">{p.discount_price.toLocaleString("vi-VN")} đ</span>
+                                <span className="text-[10px] text-slate-500 line-through font-normal">{p.price.toLocaleString("vi-VN")} đ</span>
+                              </div>
+                            ) : (
+                              <span className="text-white">{p.price.toLocaleString("vi-VN")} đ</span>
+                            )}
                           </td>
                           {/* Stock Status */}
                           <td className="px-5 py-4">
@@ -1486,23 +1557,6 @@ export default function AdminPage() {
           <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col my-8 animate-fade-up">
             
             {/* Top decorative gradient bar */}
-            <div className="h-1 bg-gradient-to-r from-cyan-500 to-indigo-600" />
-            
-            {/* Modal Header */}
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-850 bg-slate-950/40">
-              <h3 className="text-md font-extrabold text-white flex items-center gap-2">
-                <Shirt className="w-5 h-5 text-cyan-400" />
-                {editingProduct ? `Cập Nhật Sản Phẩm #${editingProduct.id}` : "Thêm Sản Phẩm Mới"}
-              </h3>
-              <button 
-                onClick={() => setIsProductModalOpen(false)}
-                className="text-slate-400 hover:text-white transition p-1 hover:bg-slate-800 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Form */}
             <form onSubmit={handleProductSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 max-h-[70vh]">
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1540,7 +1594,7 @@ export default function AdminPage() {
 
                 {/* Price */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Giá Bán (đ) *</label>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Giá Bán Gốc (đ) *</label>
                   <input
                     type="number"
                     name="price"
@@ -1548,6 +1602,20 @@ export default function AdminPage() {
                     min={0}
                     value={productForm.price}
                     onChange={handleProductFormChange}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 transition"
+                  />
+                </div>
+
+                {/* Discount Price */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Giá Khuyến Mãi (đ) (Bỏ trống nếu không giảm)</label>
+                  <input
+                    type="number"
+                    name="discount_price"
+                    min={0}
+                    value={productForm.discount_price}
+                    onChange={handleProductFormChange}
+                    placeholder="Không giảm giá"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 transition"
                   />
                 </div>
@@ -1567,8 +1635,8 @@ export default function AdminPage() {
                 </div>
 
                 {/* Image URL and File Upload */}
-                <div className="col-span-1 md:col-span-2 space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Hình Ảnh Sản Phẩm *</label>
+                <div className="col-span-1 md:col-span-2 space-y-1.5 border-t border-slate-800 pt-4">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Hình Ảnh Chính Sản Phẩm (Bắt buộc) *</label>
                   <div className="flex gap-4 items-start">
                     {/* Preview Thumbnail */}
                     {productForm.image && (
@@ -1609,9 +1677,58 @@ export default function AdminPage() {
                             className="hidden"
                           />
                         </label>
-                        <span className="text-[10px] text-slate-500">Hỗ trợ PNG, JPG, WebP (Tải lên Cloudinary)</span>
+                        <span className="text-[10px] text-slate-550">Hỗ trợ PNG, JPG, WebP (Tải lên Cloudinary)</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Multiple Images Upload (Additional Gallery) */}
+                <div className="col-span-1 md:col-span-2 space-y-1.5 border-t border-slate-800 pt-4">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-450">Tải nhiều ảnh phụ (Bộ sưu tập sản phẩm)</label>
+                  
+                  {/* Thumbnail gallery preview with remove button */}
+                  {productForm.images && productForm.images.length > 0 && (
+                    <div className="flex flex-wrap gap-3 mb-3">
+                      {productForm.images.map((imgUrl, idx) => (
+                        <div key={idx} className="relative w-16 h-16 rounded-xl border border-slate-850 bg-slate-950 overflow-hidden group">
+                          <img src={imgUrl} alt={`gallery-${idx}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImageThumbnail(idx)}
+                            className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-150 text-rose-500 rounded-xl"
+                            title="Xóa ảnh này"
+                          >
+                            <X className="w-5.5 h-5.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2">
+                    <label className="bg-slate-850 hover:bg-slate-800 text-slate-200 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold cursor-pointer transition flex items-center gap-1.5">
+                      {isUploadingImage ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          Đang tải lên...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          Tải nhiều ảnh chi tiết
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleProductMultipleImagesUpload}
+                        disabled={isUploadingImage}
+                        className="hidden"
+                      />
+                    </label>
+                    <span className="text-[10px] text-slate-550">Chọn 1 hoặc nhiều ảnh phụ cùng lúc để tải lên</span>
                   </div>
                 </div>
 

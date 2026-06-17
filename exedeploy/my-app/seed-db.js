@@ -65,8 +65,10 @@ async function seed() {
         name TEXT NOT NULL,
         description TEXT,
         price DECIMAL(10,2) NOT NULL,
+        discount_price DECIMAL(10,2) DEFAULT NULL,
         stock INTEGER DEFAULT 0,
         image TEXT,
+        images TEXT DEFAULT NULL,
         category_id INTEGER,
         is_customizable INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -208,6 +210,12 @@ async function seed() {
     } catch (e) {}
     try {
       await client.execute('ALTER TABLE orders ADD COLUMN discount_amount DECIMAL(10,2) DEFAULT 0');
+    } catch (e) {}
+    try {
+      await client.execute('ALTER TABLE products ADD COLUMN discount_price DECIMAL(10,2) DEFAULT NULL');
+    } catch (e) {}
+    try {
+      await client.execute('ALTER TABLE products ADD COLUMN images TEXT DEFAULT NULL');
     } catch (e) {}
 
     // Seed data

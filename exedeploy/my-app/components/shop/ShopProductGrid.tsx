@@ -6,7 +6,8 @@ import { useApp, Product } from "../AppContext";
 interface ShopProduct {
 	id: string;
 	title: string;
-	price: string;
+	price: number;
+	discount_price?: number | null;
 	img: string;
 	tag?: string;
 	raw: Product;
@@ -34,6 +35,7 @@ export default function ShopProductGrid({ products }: ShopProductGridProps) {
 					<ProductCard
 						title={product.title}
 						price={product.price}
+						discount_price={product.discount_price}
 						img={product.img}
 						tag={product.tag}
 					/>

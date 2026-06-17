@@ -30,12 +30,17 @@ export async function GET(req: Request) {
 
     const products = await query.all<any>(sql, params);
 
-    // Fetch sizes and colors for each product
+    // Fetch sizes, colors, and parse images for each product
     for (const product of products) {
       const sizes = await query.all<{ size_name: string }>('SELECT size_name FROM product_sizes WHERE product_id = ?', [product.id]);
       const colors = await query.all<{ color_name: string }>('SELECT color_name FROM product_colors WHERE product_id = ?', [product.id]);
       product.sizes = sizes.map(s => s.size_name);
       product.colors = colors.map(c => c.color_name);
+      try {
+        product.images = product.images ? JSON.parse(product.images) : (product.image ? [product.image] : []);
+      } catch (e) {
+        product.images = product.image ? [product.image] : [];
+      }
     }
 
     return NextResponse.json({
@@ -60,7 +65,7 @@ export async function POST(req: Request) {
       return forbiddenResponse();
     }
 
-    const { name, description, price, stock, image, category_id, is_customizable, sizes, colors } = await req.json();
+    const { name, description, price, discount_price, stock, image, images, category_id, is_customizable, sizes, colors } = await req.json();
 
     if (!name || price === undefined) {
       return NextResponse.json(
@@ -70,12 +75,14 @@ export async function POST(req: Request) {
     }
 
     const customizable = is_customizable ? 1 : 0;
+    const finalDiscountPrice = discount_price !== undefined && discount_price !== "" && discount_price !== null ? Number(discount_price) : null;
+    const imagesJson = images && Array.isArray(images) ? JSON.stringify(images) : null;
 
     // Insert product
     const result = await query.run(`
-      INSERT INTO products (name, description, price, stock, image, category_id, is_customizable)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [name, description || null, price, stock || 0, image || null, category_id || null, customizable]);
+      INSERT INTO products (name, description, price, discount_price, stock, image, images, category_id, is_customizable)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [name, description || null, price, finalDiscountPrice, stock || 0, image || null, imagesJson, category_id || null, customizable]);
 
     const productId = result.id;
 
@@ -101,13 +108,22 @@ export async function POST(req: Request) {
       WHERE p.id = ?
     `, [productId]);
 
+    if (product) {
+      try {
+        product.images = product.images ? JSON.parse(product.images) : (product.image ? [product.image] : []);
+      } catch (e) {
+        product.images = product.image ? [product.image] : [];
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Product created successfully',
       product: {
         ...product,
         sizes: sizes || [],
-        colors: colors || []
+        colors: colors || [],
+        images: images || (image ? [image] : [])
       }
     }, { status: 201 });
   } catch (error: any) {

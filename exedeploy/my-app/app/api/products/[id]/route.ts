@@ -20,6 +20,12 @@ export async function GET(
       return NextResponse.json({ success: false, message: 'Product not found' }, { status: 404 });
     }
 
+    try {
+      product.images = product.images ? JSON.parse(product.images) : (product.image ? [product.image] : []);
+    } catch (e) {
+      product.images = product.image ? [product.image] : [];
+    }
+
     // Get sizes and colors
     const sizes = await query.all<{ size_name: string }>('SELECT size_name FROM product_sizes WHERE product_id = ?', [productId]);
     const colors = await query.all<{ color_name: string }>('SELECT color_name FROM product_colors WHERE product_id = ?', [productId]);
@@ -62,7 +68,7 @@ export async function PUT(
     }
 
     const { id: productId } = await params;
-    const { name, description, price, stock, image, category_id, is_customizable, sizes, colors } = await req.json();
+    const { name, description, price, discount_price, stock, image, images, category_id, is_customizable, sizes, colors } = await req.json();
 
     const existingProduct = await query.get<any>('SELECT * FROM products WHERE id = ?', [productId]);
     if (!existingProduct) {
@@ -72,16 +78,18 @@ export async function PUT(
     const newName = name !== undefined ? name : existingProduct.name;
     const newDescription = description !== undefined ? description : existingProduct.description;
     const newPrice = price !== undefined ? price : existingProduct.price;
+    const newDiscountPrice = discount_price !== undefined ? (discount_price !== "" && discount_price !== null ? Number(discount_price) : null) : existingProduct.discount_price;
     const newStock = stock !== undefined ? stock : existingProduct.stock;
     const newImage = image !== undefined ? image : existingProduct.image;
+    const newImages = images !== undefined ? (Array.isArray(images) ? JSON.stringify(images) : null) : existingProduct.images;
     const newCategoryId = category_id !== undefined ? category_id : existingProduct.category_id;
     const newCustomizable = is_customizable !== undefined ? (is_customizable ? 1 : 0) : existingProduct.is_customizable;
 
     await query.run(`
       UPDATE products
-      SET name = ?, description = ?, price = ?, stock = ?, image = ?, category_id = ?, is_customizable = ?
+      SET name = ?, description = ?, price = ?, discount_price = ?, stock = ?, image = ?, images = ?, category_id = ?, is_customizable = ?
       WHERE id = ?
-    `, [newName, newDescription, newPrice, newStock, newImage, newCategoryId, newCustomizable, productId]);
+    `, [newName, newDescription, newPrice, newDiscountPrice, newStock, newImage, newImages, newCategoryId, newCustomizable, productId]);
 
     // Handle sizes update if provided
     if (sizes && Array.isArray(sizes)) {
@@ -106,6 +114,14 @@ export async function PUT(
       LEFT JOIN categories c ON p.category_id = c.id
       WHERE p.id = ?
     `, [productId]);
+
+    if (product) {
+      try {
+        product.images = product.images ? JSON.parse(product.images) : (product.image ? [product.image] : []);
+      } catch (e) {
+        product.images = product.image ? [product.image] : [];
+      }
+    }
 
     const updatedSizes = await query.all<{ size_name: string }>('SELECT size_name FROM product_sizes WHERE product_id = ?', [productId]);
     const updatedColors = await query.all<{ color_name: string }>('SELECT color_name FROM product_colors WHERE product_id = ?', [productId]);
