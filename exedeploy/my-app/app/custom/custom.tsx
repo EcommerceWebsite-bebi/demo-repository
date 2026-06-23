@@ -16,6 +16,7 @@ export default function CustomPage() {
   const [size, setSize] = useState("medium");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [backPreviewUrl, setBackPreviewUrl] = useState<string | null>(null);
+  const [pendingAiImageUrl, setPendingAiImageUrl] = useState<string | null>(null);
 
   // Purchase states
   const [selectedSize, setSelectedSize] = useState("M");
@@ -42,10 +43,17 @@ export default function CustomPage() {
   }, [user]);
 
   function createDesign() {
-    const url = `/api/generate?prompt=${encodeURIComponent(prompt)}&style=${encodeURIComponent(
-      style
-    )}&size=${encodeURIComponent(size)}&_=${Date.now()}`;
-    setPreviewUrl(url);
+    // Legacy: kept for compatibility but AI generation is now inside CustomForm
+    if (!prompt) return;
+  }
+
+  // Called when user clicks an AI-generated image in CustomForm gallery
+  function handleSelectAiImage(url: string) {
+    // Use a new object reference each time so useEffect always fires
+    setPendingAiImageUrl(null); // reset first
+    setTimeout(() => setPendingAiImageUrl(url), 0);
+    setPreviewUrl(url);         // also update 3D shirt
+    setBackPreviewUrl(null);
   }
 
   // Find backend customizable product
@@ -159,7 +167,9 @@ export default function CustomPage() {
                 setPreviewUrl(null);
                 setBackPreviewUrl(null);
               }}
+              onSelectImage={handleSelectAiImage}
             />
+
 
             {/* Direct Purchase Section */}
             {previewUrl && (
@@ -375,11 +385,13 @@ export default function CustomPage() {
             style={style}
             size={size}
             prompt={prompt}
+            pendingAiImageUrl={pendingAiImageUrl}
             onApplyArtwork={(front, back) => {
               setPreviewUrl(front || null);
               setBackPreviewUrl(back || null);
             }}
           />
+
         </div>
       </main>
       <Footer />

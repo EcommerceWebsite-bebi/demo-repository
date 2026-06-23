@@ -23,9 +23,10 @@ interface CanvasEditorProps {
   onApply: (frontUrl: string, backUrl: string) => void;
   onClose?: () => void;
   isInline?: boolean;
+  pendingImageUrl?: string | null;  // AI-generated image to add to canvas
 }
 
-export default function CanvasEditor({ onApply, onClose, isInline = false }: CanvasEditorProps) {
+export default function CanvasEditor({ onApply, onClose, isInline = false, pendingImageUrl }: CanvasEditorProps) {
   // Global States
   const [activeTab, setActiveTab] = useState('draw');
   const [canvas, setCanvas] = useState<fabric.Canvas | null>(null);
@@ -49,6 +50,38 @@ export default function CanvasEditor({ onApply, onClose, isInline = false }: Can
 
   // Export Dropdown State
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+
+  // Auto-add pendingImageUrl to canvas when it changes
+  useEffect(() => {
+    if (!canvas || !pendingImageUrl) return;
+    fabric.Image.fromURL(
+      pendingImageUrl,
+      (img) => {
+        if (!canvas) return;
+        // Scale to fit ~60% of canvas
+        const maxDim = Math.min(canvas.width! * 0.6, canvas.height! * 0.6);
+        const imgMax = Math.max(img.width || 1, img.height || 1);
+        if (imgMax > maxDim) {
+          img.scale(maxDim / imgMax);
+        }
+        img.set({
+          left: canvas.width! / 2,
+          top: canvas.height! / 2,
+          originX: 'center',
+          originY: 'center',
+          cornerColor: 'var(--accent-color)',
+          cornerStyle: 'circle',
+          transparentCorners: false,
+        });
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.renderAll();
+        handleStateChange();
+      },
+      { crossOrigin: 'anonymous' }
+    );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingImageUrl, canvas]);
 
   // Handle outside clicks to close export dropdown
   useEffect(() => {

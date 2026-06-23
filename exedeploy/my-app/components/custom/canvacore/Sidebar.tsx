@@ -1,4 +1,4 @@
-import { Brush, Shapes, Type, ImagePlus, Layers } from 'lucide-react';
+import { Brush, Shapes, Type, ImagePlus, Layers, Wand2 } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -11,6 +11,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     { id: 'shapes', label: 'Shapes', icon: Shapes },
     { id: 'text', label: 'Text', icon: Type },
     { id: 'images', label: 'Images', icon: ImagePlus },
+    { id: 'ai', label: 'AI Gen', icon: Wand2 },
     { id: 'layers', label: 'Layers', icon: Layers },
   ];
 
@@ -21,7 +22,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
         return (
           <button
             key={tab.id}
-            className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+            className={`tab-btn ${activeTab === tab.id ? 'active' : ''} ${tab.id === 'ai' ? 'tab-btn-ai' : ''}`}
             onClick={() => setActiveTab(tab.id)}
             title={`${tab.label} Tool`}
           >

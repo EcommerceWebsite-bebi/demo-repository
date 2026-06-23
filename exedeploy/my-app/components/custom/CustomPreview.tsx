@@ -51,6 +51,7 @@ interface CustomPreviewProps {
   size: string;
   prompt: string;
   onApplyArtwork?: (url: string, backUrl?: string) => void;
+  pendingAiImageUrl?: string | null; // AI image to add to canvas
 }
 
 const PRESET_COLORS = [
@@ -69,6 +70,7 @@ export default function CustomPreview({
   size: defaultSizeProp,
   prompt,
   onApplyArtwork,
+  pendingAiImageUrl,
 }: CustomPreviewProps) {
   // --- View States ---
   const [activeView, setActiveView] = useState<"2d" | "3d">("3d");
@@ -104,6 +106,13 @@ export default function CustomPreview({
       setLogoTextureUrl(previewUrl);
     }
   }, [previewUrl]);
+
+  // Auto-switch to 2D canvas when a new AI image arrives
+  useEffect(() => {
+    if (pendingAiImageUrl) {
+      setActiveView('2d');
+    }
+  }, [pendingAiImageUrl]);
 
   // Sync size prop when it changes from the parent form
   useEffect(() => {
@@ -298,6 +307,7 @@ export default function CustomPreview({
       >
         <CanvasEditor
           isInline={true}
+          pendingImageUrl={pendingAiImageUrl}
           onApply={(frontUrl, backUrl) => {
             if (onApplyArtwork) {
               onApplyArtwork(frontUrl, backUrl);

@@ -15,8 +15,96 @@ import {
   AlignCenter, 
   AlignRight, 
   UploadCloud,
-  ClipboardPaste
+  ClipboardPaste,
+  Wand2,
+  Sparkles,
+  Loader2,
+  ImageOff,
+  CheckCircle2
 } from 'lucide-react';
+
+// ---- AI Preset Sticker Prompts ----
+interface AiPreset {
+  key: string;
+  label: string;
+  emoji: string;
+  prompt: string;
+}
+
+const AI_PRESETS: AiPreset[] = [
+  {
+    key: 'mascot',
+    label: 'Sticker Mascot',
+    emoji: '🦸',
+    prompt: 'Cute chibi mascot sticker, clean vector style, bold outline, vibrant colors, transparent background, centered composition, commercial t-shirt print design, high quality, isolated PNG'
+  },
+  {
+    key: 'anime',
+    label: 'Anime Sticker',
+    emoji: '🌸',
+    prompt: 'Cute anime character sticker, kawaii style, thick white border, vibrant colors, transparent background, die-cut sticker design, vector illustration, isolated PNG'
+  },
+  {
+    key: 'gaming',
+    label: 'Gaming Sticker',
+    emoji: '🎮',
+    prompt: 'Gaming logo sticker, esports style, aggressive mascot, bold lines, vibrant colors, transparent background, vector artwork, high quality, isolated PNG'
+  },
+  {
+    key: 'animal',
+    label: 'Animal Sticker',
+    emoji: '🐾',
+    prompt: 'Cute cartoon corgi sticker, vector illustration, thick outline, transparent background, die-cut sticker, colorful, t-shirt graphic design, isolated PNG'
+  },
+  {
+    key: 'food',
+    label: 'Food Sticker',
+    emoji: '🧋',
+    prompt: 'Cute bubble tea sticker, kawaii style, smiling face, pastel colors, thick white border, transparent background, vector illustration, isolated PNG'
+  },
+  {
+    key: 'minimal',
+    label: 'Minimal Icon',
+    emoji: '⬡',
+    prompt: 'Minimal modern icon, clean vector style, monochrome, transparent background, scalable SVG style, centered composition, isolated PNG'
+  },
+  {
+    key: 'streetwear',
+    label: 'Streetwear',
+    emoji: '🔥',
+    prompt: 'Japanese streetwear sticker graphic, bold typography, urban aesthetic, black and white, vector artwork, transparent background, premium t-shirt print design'
+  },
+  {
+    key: 'dragon',
+    label: 'Rồng / Dragon',
+    emoji: '🐉',
+    prompt: 'Cute dragon mascot sticker, cartoon vector style, bold outline, transparent background, high detail, t-shirt graphic design, isolated PNG'
+  },
+  {
+    key: 'cat',
+    label: 'Mèo / Cat',
+    emoji: '🐱',
+    prompt: 'Cute cat mascot sticker, kawaii style, thick white border, transparent background, vector illustration, isolated PNG'
+  },
+  {
+    key: 'pokemon',
+    label: 'Pokemon-like',
+    emoji: '✨',
+    prompt: 'Cute fantasy monster sticker, colorful creature, cartoon vector style, transparent background, die-cut sticker design, isolated PNG'
+  },
+  {
+    key: 'skull',
+    label: 'Skull',
+    emoji: '💀',
+    prompt: 'Streetwear skull sticker, bold vector artwork, transparent background, high contrast, premium t-shirt graphic design'
+  },
+  {
+    key: 'custom',
+    label: 'Custom',
+    emoji: '✏️',
+    prompt: ''
+  },
+];
 
 interface ToolbarPanelProps {
   activeTab: string;
@@ -61,6 +149,85 @@ export default function ToolbarPanel({
   const [textAlign, setTextAlign] = useState('center');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ---- AI Generator State ----
+  const [aiPresetKey, setAiPresetKey] = useState<string>('');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiImages, setAiImages] = useState<string[]>([]);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiAddedIndex, setAiAddedIndex] = useState<number | null>(null);
+
+  // Select a preset and fill the prompt
+  const handleSelectPreset = (preset: AiPreset) => {
+    setAiPresetKey(preset.key);
+    setAiPrompt(preset.prompt);
+    setAiError(null);
+  };
+
+  // Call the AI generation API
+  const handleAiGenerate = async () => {
+    if (!aiPrompt.trim()) {
+      setAiError('Please enter a prompt or select a preset.');
+      return;
+    }
+    setAiGenerating(true);
+    setAiError(null);
+    setAiImages([]);
+    setAiAddedIndex(null);
+    try {
+      const res = await fetch('/api/generate/ai-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(data.error || 'Generation failed.');
+        return;
+      }
+      setAiImages(data.images || []);
+      if (data.errors?.length) {
+        console.warn('Some images failed:', data.errors);
+      }
+    } catch (e: any) {
+      setAiError(e.message || 'Network error.');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  // Add a generated image to the Fabric.js canvas
+  const handleAddAiImageToCanvas = (url: string, index: number) => {
+    if (!canvas) return;
+    fabric.Image.fromURL(
+      url,
+      (img) => {
+        // Scale down if too large
+        const maxDim = Math.min(canvas.width! * 0.6, canvas.height! * 0.6);
+        const imgMax = Math.max(img.width || 1, img.height || 1);
+        if (imgMax > maxDim) {
+          img.scale(maxDim / imgMax);
+        }
+        img.set({
+          left: canvas.width! / 2,
+          top: canvas.height! / 2,
+          originX: 'center',
+          originY: 'center',
+          cornerColor: 'var(--accent-color)',
+          cornerStyle: 'circle',
+          transparentCorners: false,
+        });
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.renderAll();
+        onStateChange();
+        setAiAddedIndex(index);
+        setTimeout(() => setAiAddedIndex(null), 1500);
+      },
+      { crossOrigin: 'anonymous' }
+    );
+  };
 
   // Sync tools mode in fabric
   useEffect(() => {
@@ -567,7 +734,111 @@ export default function ToolbarPanel({
         </div>
       </div>
 
-      {/* 5. LAYERS PANEL */}
+      {/* 5. AI GENERATOR PANEL */}
+      <div className={`panel-content ai-panel ${activeTab === 'ai' ? 'active' : ''}`}>
+        <div className="ai-panel-header">
+          <Wand2 size={18} className="ai-panel-icon" />
+          <h2>AI Design Generator</h2>
+        </div>
+        <p className="ai-panel-subtitle">Pick a preset or write your own prompt to generate 4 sticker designs.</p>
+
+        {/* Preset chips */}
+        <div className="panel-section">
+          <label className="section-title">Preset Styles</label>
+          <div className="ai-preset-grid">
+            {AI_PRESETS.map((preset) => (
+              <button
+                key={preset.key}
+                className={`ai-preset-chip ${aiPresetKey === preset.key ? 'active' : ''}`}
+                onClick={() => handleSelectPreset(preset)}
+                title={preset.prompt || preset.label}
+              >
+                <span className="ai-preset-emoji">{preset.emoji}</span>
+                <span className="ai-preset-label">{preset.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Prompt textarea */}
+        <div className="panel-section">
+          <label className="section-title">Prompt</label>
+          <textarea
+            className="ai-prompt-textarea"
+            value={aiPrompt}
+            onChange={(e) => { setAiPrompt(e.target.value); setAiPresetKey('custom'); }}
+            placeholder="Describe your sticker design... e.g. 'Cute dragon mascot, kawaii style'"
+            rows={4}
+          />
+          <p className="ai-prompt-hint">
+            <Sparkles size={11} style={{ display: 'inline', marginRight: 3, verticalAlign: 'middle' }} />
+            Suffix automatically added: transparent background, die-cut sticker, isolated PNG
+          </p>
+        </div>
+
+        {/* Generate button */}
+        <div className="panel-section">
+          <button
+            className={`btn btn-ai-generate btn-full ${aiGenerating ? 'loading' : ''}`}
+            onClick={handleAiGenerate}
+            disabled={aiGenerating || !aiPrompt.trim()}
+          >
+            {aiGenerating ? (
+              <><Loader2 size={16} className="ai-spin" /> Generating 4 images…</>
+            ) : (
+              <><Wand2 size={16} /> Generate 4 Designs</>  
+            )}
+          </button>
+        </div>
+
+        {/* Error display */}
+        {aiError && (
+          <div className="ai-error-box">
+            <ImageOff size={14} />
+            <span>{aiError}</span>
+          </div>
+        )}
+
+        {/* Loading skeleton */}
+        {aiGenerating && (
+          <div className="ai-gallery">
+            {[0,1,2,3].map((i) => (
+              <div key={i} className="ai-gallery-skeleton">
+                <div className="ai-skeleton-shimmer" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Generated images gallery */}
+        {!aiGenerating && aiImages.length > 0 && (
+          <div className="panel-section">
+            <label className="section-title">Click to add to canvas</label>
+            <div className="ai-gallery">
+              {aiImages.map((url, i) => (
+                <button
+                  key={url}
+                  className={`ai-gallery-item ${aiAddedIndex === i ? 'added' : ''}`}
+                  onClick={() => handleAddAiImageToCanvas(url, i)}
+                  title="Click to add to canvas"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`AI design ${i + 1}`} className="ai-gallery-img" />
+                  <div className="ai-gallery-overlay">
+                    {aiAddedIndex === i ? (
+                      <><CheckCircle2 size={20} /> Added!</>
+                    ) : (
+                      <><Sparkles size={16} /> Add to Canvas</>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 6. LAYERS PANEL */}
       <div className={`panel-content ${activeTab === 'layers' ? 'active' : ''}`}>
         {children}
       </div>
