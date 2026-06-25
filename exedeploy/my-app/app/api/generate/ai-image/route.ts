@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server";
-import { v2 as cloudinary } from "cloudinary";
 import { Jimp, intToRGBA, rgbaToInt, JimpMime } from "jimp";
 
 // Allow up to 60 seconds for AI image generation on Vercel
 export const maxDuration = 60;
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
 // Suffix appended to every user prompt for best sticker results
 const STICKER_SUFFIX =
   "transparent background, isolated PNG, vector illustration, sticker design, die-cut sticker, centered composition, no background, high resolution";
+
+// Check if Cloudinary is configured
+function hasCloudinaryConfig(): boolean {
+  return !!(
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET
+  );
+}
 
 /**
  * Remove background using flood-fill from all 4 corners.
@@ -96,62 +97,73 @@ async function removeBackgroundFloodFill(buffer: Buffer): Promise<Buffer> {
   return Buffer.from(await img.getBuffer(JimpMime.png));
 }
 
-// Check Cloudinary credentials are configured
-function checkCloudinaryConfig(): void {
-  const missing = [];
-  if (!process.env.CLOUDINARY_CLOUD_NAME) missing.push("CLOUDINARY_CLOUD_NAME");
-  if (!process.env.CLOUDINARY_API_KEY) missing.push("CLOUDINARY_API_KEY");
-  if (!process.env.CLOUDINARY_API_SECRET) missing.push("CLOUDINARY_API_SECRET");
-  if (missing.length > 0) {
-    throw new Error(
-      `Missing Cloudinary environment variables: ${missing.join(", ")}. ` +
-      `Please add them to your Vercel project settings under Settings → Environment Variables.`
-    );
+/**
+ * Upload buffer to Cloudinary if credentials exist,
+ * otherwise fall back to base64 data URL (same pattern as /api/upload).
+ */
+async function bufferToUrl(buffer: Buffer, index: number): Promise<string> {
+  if (hasCloudinaryConfig()) {
+    // Lazy import to avoid errors when Cloudinary env vars are missing
+    const { v2: cloudinary } = await import("cloudinary");
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
+
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "ai-designs",
+          public_id: `ai-design-${Date.now()}-${index}`,
+          resource_type: "image",
+          format: "png",
+        },
+        (error, result) => {
+          if (error || !result)
+            return reject(error || new Error("Cloudinary upload failed"));
+          resolve(result.secure_url);
+        }
+      );
+      uploadStream.end(buffer);
+    });
   }
+
+  // Fallback: return as base64 data URL (no external dependency needed)
+  console.log(`Cloudinary not configured — returning base64 data URL for image ${index}`);
+  return `data:image/png;base64,${buffer.toString("base64")}`;
 }
 
-// Upload a PNG Buffer to Cloudinary and return a secure URL
-async function uploadBufferToCloudinary(
-  buffer: Buffer,
-  index: number
-): Promise<string> {
-  checkCloudinaryConfig();
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: "ai-designs",
-        public_id: `ai-design-${Date.now()}-${index}`,
-        resource_type: "image",
-        format: "png",
-      },
-      (error, result) => {
-        if (error || !result)
-          return reject(error || new Error("Cloudinary upload failed"));
-        resolve(result.secure_url);
-      }
-    );
-    uploadStream.end(buffer);
-  });
-}
+/**
+ * Upload a URL-based image to Cloudinary if available,
+ * otherwise fetch the image and return as base64 data URL.
+ */
+async function urlToStoredUrl(imageUrl: string, index: number): Promise<string> {
+  if (hasCloudinaryConfig()) {
+    const { v2: cloudinary } = await import("cloudinary");
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
 
-// Upload an image from URL to Cloudinary and return a secure URL
-async function uploadUrlToCloudinary(
-  imageUrl: string,
-  index: number
-): Promise<string> {
-  checkCloudinaryConfig();
-  const result = await cloudinary.uploader.upload(imageUrl, {
-    folder: "ai-designs",
-    public_id: `ai-design-${Date.now()}-${index}`,
-    resource_type: "image",
-    format: "png",
-  });
-  return result.secure_url;
+    const result = await cloudinary.uploader.upload(imageUrl, {
+      folder: "ai-designs",
+      public_id: `ai-design-${Date.now()}-${index}`,
+      resource_type: "image",
+      format: "png",
+    });
+    return result.secure_url;
+  }
+
+  // Fallback: fetch the image and return as base64
+  const res = await fetch(imageUrl, { signal: AbortSignal.timeout(30_000) });
+  const buf = Buffer.from(await res.arrayBuffer());
+  return `data:image/png;base64,${buf.toString("base64")}`;
 }
 
 // Generate a single image via Pollinations.ai (FREE — no API key needed)
-// Removes background automatically before uploading to Cloudinary
-// Timeout: 50s (safely within Vercel's 60s maxDuration)
+// Timeout: 50s to stay within Vercel's 60s maxDuration limit
 async function generateViaPollinations(
   fullPrompt: string,
   index: number
@@ -163,7 +175,6 @@ async function generateViaPollinations(
     `https://image.pollinations.ai/prompt/${encodedPrompt}` +
     `?width=1024&height=1024&seed=${seed}&nologo=true&model=flux`;
 
-  // Timeout reduced to 50s to stay within Vercel's 60s maxDuration limit
   const imgRes = await fetch(pollinationsUrl, {
     signal: AbortSignal.timeout(50_000),
   });
@@ -185,12 +196,11 @@ async function generateViaPollinations(
     processedBuffer = rawBuffer;
   }
 
-  // Upload transparent PNG to Cloudinary
-  return await uploadBufferToCloudinary(processedBuffer, index);
+  return await bufferToUrl(processedBuffer, index);
 }
 
 // Generate via OpenAI (optional — requires funded account)
-// Timeout: 45s (to leave room for Cloudinary upload within 60s maxDuration)
+// Timeout: 45s to leave room for storage within 60s maxDuration
 async function generateViaOpenAI(
   fullPrompt: string,
   index: number,
@@ -222,9 +232,9 @@ async function generateViaOpenAI(
       const imageData = data.data?.[0];
       if (imageData?.b64_json) {
         const buffer = Buffer.from(imageData.b64_json, "base64");
-        return await uploadBufferToCloudinary(buffer, index);
+        return await bufferToUrl(buffer, index);
       } else if (imageData?.url) {
-        return await uploadUrlToCloudinary(imageData.url, index);
+        return await urlToStoredUrl(imageData.url, index);
       }
     }
   } catch {
@@ -259,9 +269,9 @@ async function generateViaOpenAI(
 
   if (fallbackImageData?.b64_json) {
     const buffer = Buffer.from(fallbackImageData.b64_json, "base64");
-    return await uploadBufferToCloudinary(buffer, index);
+    return await bufferToUrl(buffer, index);
   } else if (fallbackImageData?.url) {
-    return await uploadUrlToCloudinary(fallbackImageData.url, index);
+    return await urlToStoredUrl(fallbackImageData.url, index);
   }
 
   throw new Error("No image data returned from OpenAI");
@@ -320,6 +330,7 @@ export async function POST(req: Request) {
       images: imageUrls,
       errors,
       provider: hasOpenAI ? "openai" : "pollinations",
+      storage: hasCloudinaryConfig() ? "cloudinary" : "base64",
     });
   } catch (error: any) {
     console.error("AI Image generation error:", error);
