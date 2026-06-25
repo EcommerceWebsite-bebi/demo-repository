@@ -236,18 +236,32 @@ export default function UserProfileModal() {
                                     </span>
                                   </>
                                 )}
-                                {item.custom_design_pdf && (
+                                {item.custom_design_image && (
                                   <>
                                     <span className="mx-1.5">•</span>
-                                    <a
-                                      href={item.custom_design_pdf}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          const res = await fetch(`/api/orders/${order.id}/pdf?itemId=${item.id}`);
+                                          if (!res.ok) throw new Error('Không thể tạo PDF');
+                                          const blob = await res.blob();
+                                          const url = URL.createObjectURL(blob);
+                                          const a = document.createElement('a');
+                                          a.href = url;
+                                          a.download = `mouseee-order-${order.id}-item-${item.id}.pdf`;
+                                          document.body.appendChild(a);
+                                          a.click();
+                                          document.body.removeChild(a);
+                                          URL.revokeObjectURL(url);
+                                        } catch (err) {
+                                          alert('Lỗi tải PDF. Vui lòng thử lại.');
+                                        }
+                                      }}
                                       className="text-emerald-650 font-bold bg-emerald-50 px-1.5 py-0.5 rounded hover:bg-emerald-100 transition inline-flex items-center gap-0.5 cursor-pointer"
                                     >
                                       <FileText className="w-2.5 h-2.5" />
-                                      Xem PDF
-                                    </a>
+                                      Tải PDF
+                                    </button>
                                   </>
                                 )}
                               </p>
