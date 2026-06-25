@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { Jimp, intToRGBA, rgbaToInt, JimpMime } from "jimp";
 
+// Allow up to 60 seconds for AI image generation on Vercel
+export const maxDuration = 60;
+
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -93,12 +96,26 @@ async function removeBackgroundFloodFill(buffer: Buffer): Promise<Buffer> {
   return Buffer.from(await img.getBuffer(JimpMime.png));
 }
 
+// Check Cloudinary credentials are configured
+function checkCloudinaryConfig(): void {
+  const missing = [];
+  if (!process.env.CLOUDINARY_CLOUD_NAME) missing.push("CLOUDINARY_CLOUD_NAME");
+  if (!process.env.CLOUDINARY_API_KEY) missing.push("CLOUDINARY_API_KEY");
+  if (!process.env.CLOUDINARY_API_SECRET) missing.push("CLOUDINARY_API_SECRET");
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing Cloudinary environment variables: ${missing.join(", ")}. ` +
+      `Please add them to your Vercel project settings under Settings → Environment Variables.`
+    );
+  }
+}
 
 // Upload a PNG Buffer to Cloudinary and return a secure URL
 async function uploadBufferToCloudinary(
   buffer: Buffer,
   index: number
 ): Promise<string> {
+  checkCloudinaryConfig();
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -122,6 +139,7 @@ async function uploadUrlToCloudinary(
   imageUrl: string,
   index: number
 ): Promise<string> {
+  checkCloudinaryConfig();
   const result = await cloudinary.uploader.upload(imageUrl, {
     folder: "ai-designs",
     public_id: `ai-design-${Date.now()}-${index}`,
@@ -133,6 +151,7 @@ async function uploadUrlToCloudinary(
 
 // Generate a single image via Pollinations.ai (FREE — no API key needed)
 // Removes background automatically before uploading to Cloudinary
+// Timeout: 50s (safely within Vercel's 60s maxDuration)
 async function generateViaPollinations(
   fullPrompt: string,
   index: number
@@ -144,8 +163,9 @@ async function generateViaPollinations(
     `https://image.pollinations.ai/prompt/${encodedPrompt}` +
     `?width=1024&height=1024&seed=${seed}&nologo=true&model=flux`;
 
+  // Timeout reduced to 50s to stay within Vercel's 60s maxDuration limit
   const imgRes = await fetch(pollinationsUrl, {
-    signal: AbortSignal.timeout(90_000),
+    signal: AbortSignal.timeout(50_000),
   });
 
   if (!imgRes.ok) {
@@ -170,6 +190,7 @@ async function generateViaPollinations(
 }
 
 // Generate via OpenAI (optional — requires funded account)
+// Timeout: 45s (to leave room for Cloudinary upload within 60s maxDuration)
 async function generateViaOpenAI(
   fullPrompt: string,
   index: number,
@@ -193,7 +214,7 @@ async function generateViaOpenAI(
         "Content-Type": "application/json",
       },
       body,
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(45_000),
     });
 
     if (response.ok) {
@@ -225,7 +246,7 @@ async function generateViaOpenAI(
       "Content-Type": "application/json",
     },
     body: fallbackBody,
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(45_000),
   });
 
   if (!fallbackRes.ok) {
