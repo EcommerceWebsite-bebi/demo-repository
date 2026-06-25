@@ -66,7 +66,7 @@ async function createDesignPDF(item: any, order: any, user: any): Promise<Buffer
           doc.fontSize(10).fillColor('#475569').text('Canvas Studio Custom Designs:', 40);
           doc.moveDown(1);
 
-          let imageY = doc.y;
+          const imageY = doc.y;
 
           // Front image
           try {
@@ -123,11 +123,11 @@ async function createDesignPDF(item: any, order: any, user: any): Promise<Buffer
   });
 }
 
-// GET /api/orders/[orderId]/pdf?itemId=123
+// GET /api/orders/[id]/pdf?itemId=123
 // Generates and streams a PDF for a specific order item on-demand (no Cloudinary needed)
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ orderId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getAuthenticatedUser(req);
@@ -135,7 +135,7 @@ export async function GET(
       return unauthorizedResponse();
     }
 
-    const { orderId } = await params;
+    const { id: orderId } = await params;
     const { searchParams } = new URL(req.url);
     const itemId = searchParams.get('itemId');
 
@@ -146,8 +146,17 @@ export async function GET(
     // Fetch the order (ensure it belongs to this user or they are admin)
     const isAdmin = user.role_name === 'ADMIN';
     const order = isAdmin
-      ? await query.get<any>('SELECT o.*, u.username, u.email FROM orders o LEFT JOIN users u ON o.user_id = u.id WHERE o.id = ?', [orderId])
-      : await query.get<any>('SELECT o.*, ? as username, ? as email FROM orders o WHERE o.id = ? AND o.user_id = ?', [user.username, user.email, orderId, user.id]);
+      ? await query.get<any>(`
+          SELECT o.*, u.username, u.email 
+          FROM orders o 
+          LEFT JOIN users u ON o.user_id = u.id 
+          WHERE o.id = ?
+        `, [orderId])
+      : await query.get<any>(`
+          SELECT o.* 
+          FROM orders o 
+          WHERE o.id = ? AND o.user_id = ?
+        `, [orderId, user.id]);
 
     if (!order) {
       return NextResponse.json({ success: false, message: 'Order not found or access denied' }, { status: 404 });
@@ -170,12 +179,15 @@ export async function GET(
     }
 
     // Generate PDF on-demand
-    const userInfo = { username: order.username || user.username, email: order.email || user.email };
+    const userInfo = {
+      username: order.username || user.username,
+      email: order.email || user.email,
+    };
     const pdfBuffer = await createDesignPDF(item, order, userInfo);
-
     const fileName = `mouseee-order-${orderId}-item-${itemId}.pdf`;
 
-    return new Response(pdfBuffer, {
+    // Return PDF as downloadable file stream (no Cloudinary needed)
+    return new Response(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
