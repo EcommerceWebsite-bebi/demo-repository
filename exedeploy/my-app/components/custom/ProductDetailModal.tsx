@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X, ShoppingBag, Star, Sparkles, AlertCircle, Loader2, CheckCircle2, MessageSquare } from "lucide-react";
 import { useApp, Product } from "../AppContext";
 
@@ -32,6 +32,9 @@ export default function ProductDetailModal() {
 
   // Reset states and fetch reviews when active product changes
   useEffect(() => {
+    // Cancellation flag: prevents async callback from reopening modal after close
+    let cancelled = false;
+
     if (activeProductDetail && activeProductDetail.id !== currentId) {
       setCurrentId(activeProductDetail.id);
       setSelectedSize(activeProductDetail.sizes?.[0] || null);
@@ -44,7 +47,8 @@ export default function ProductDetailModal() {
 
       // Async fetch full product info with reviews
       fetchProductById(activeProductDetail.id).then((freshProduct) => {
-        if (freshProduct && freshProduct.id === activeProductDetail.id) {
+        // Only update if modal is still open for this product (not closed in the meantime)
+        if (!cancelled && freshProduct && freshProduct.id === activeProductDetail.id) {
           setActiveProductDetail(freshProduct);
           if (freshProduct.image && !activeImage) {
             setActiveImage(freshProduct.image);
@@ -55,6 +59,11 @@ export default function ProductDetailModal() {
       setCurrentId(null);
       setActiveImage(null);
     }
+
+    // Cleanup: mark as cancelled so pending async fetch won't reopen modal
+    return () => {
+      cancelled = true;
+    };
   }, [activeProductDetail, currentId]);
 
 
