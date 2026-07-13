@@ -1,6 +1,3 @@
-import sqlite3Init from 'sqlite3';
-import path from 'path';
-import fs from 'fs';
 import bcrypt from 'bcryptjs';
 import { createClient } from '@libsql/client';
 
@@ -13,82 +10,34 @@ const TURSO_DATABASE_URL = process.env.TURSO_DATABASE_URL || 'libsql://1-binh123
 const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJleHAiOjE3ODYwMTI2MzQsImlhdCI6MTc4MDgyODYzNCwiaWQiOiIwMTllYTFhMC0wODAxLTc1NGYtOGZjNi0wZTZiM2FmNDlhOTIiLCJyaWQiOiI1YzM4ZGU4Yy1hZmIwLTRhMTEtOTg4ZS05OTM0MTk1NDMyZmQifQ.e_rmJU_79n9D291a0i9XI7GuNIvghtSd3JVKui7T2Y760dq5zPe3XQztIZ4KF6yOOT6bCdFi1yM981pgCQJyDA';
 const SCHEMA_VERSION = '2026-07-14-daily-v1';
 
-const isTurso = !!TURSO_DATABASE_URL;
-
-export let db: any = null;
-let libsqlClient: any = null;
+const libsqlClient = createClient({
+  url: TURSO_DATABASE_URL,
+  authToken: TURSO_AUTH_TOKEN,
+});
 
 export const query = {
   async run(sql: string, params: any[] = []): Promise<RunResult> {
     await initializeDatabase();
-    if (isTurso) {
-      const res = await libsqlClient.execute({ sql, args: params });
-      return {
-        id: res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : 0,
-        changes: res.rowsAffected
-      };
-    } else {
-      return new Promise((resolve, reject) => {
-        db.run(sql, params, function (this: any, err: any) {
-          if (err) {
-            reject(err);
-          } else {
-            resolve({ id: this.lastID, changes: this.changes });
-          }
-        });
-      });
-    }
+    const res = await libsqlClient.execute({ sql, args: params });
+    return {
+      id: res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : 0,
+      changes: res.rowsAffected
+    };
   },
   async get<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
     await initializeDatabase();
-    if (isTurso) {
-      const res = await libsqlClient.execute({ sql, args: params });
-      if (res.rows.length === 0) return undefined;
-      return res.rows[0] as unknown as T;
-    } else {
-      return new Promise((resolve, reject) => {
-        db.get(sql, params, (err: any, row: any) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(row as T | undefined);
-          }
-        });
-      });
-    }
+    const res = await libsqlClient.execute({ sql, args: params });
+    if (res.rows.length === 0) return undefined;
+    return res.rows[0] as unknown as T;
   },
   async all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
     await initializeDatabase();
-    if (isTurso) {
-      const res = await libsqlClient.execute({ sql, args: params });
-      return res.rows as unknown as T[];
-    } else {
-      return new Promise((resolve, reject) => {
-        db.all(sql, params, (err: any, rows: any) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(rows as T[]);
-          }
-        });
-      });
-    }
+    const res = await libsqlClient.execute({ sql, args: params });
+    return res.rows as unknown as T[];
   },
   async exec(sql: string): Promise<void> {
     await initializeDatabase();
-    if (isTurso) {
-      await libsqlClient.executeMultiple(sql);
-    } else {
-      return new Promise((resolve, reject) => {
-        db.exec(sql, (err: any) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
-      });
-    }
+    await libsqlClient.executeMultiple(sql);
   }
 };
 
@@ -116,21 +65,14 @@ async function runDatabaseInitialization() {
   try {
     // Turso persists between deployments. A single version lookup avoids
     // replaying every CREATE/ALTER/seed query on each server cold start.
-    if (isTurso) {
-      try {
-        const version = await libsqlClient.execute({
-          sql: "SELECT value FROM app_metadata WHERE key = 'schema_version'",
-          args: [],
-        });
-        if (version.rows[0]?.value === SCHEMA_VERSION) return;
-      } catch {
-        // First installation: app_metadata does not exist yet.
-      }
-    }
-
-    // Enable Foreign Key support in SQLite (local only, remote Turso does not support PRAGMA)
-    if (!isTurso) {
-      await query.run('PRAGMA foreign_keys = ON');
+    try {
+      const version = await libsqlClient.execute({
+        sql: "SELECT value FROM app_metadata WHERE key = 'schema_version'",
+        args: [],
+      });
+      if (version.rows[0]?.value === SCHEMA_VERSION) return;
+    } catch {
+      // First installation: app_metadata does not exist yet.
     }
 
     // Create tables if they don't exist
@@ -520,60 +462,7 @@ async function runDatabaseInitialization() {
   }
 }
 
-if (isTurso) {
-  console.log('Connecting to Turso Cloud SQLite database at:', TURSO_DATABASE_URL);
-  libsqlClient = createClient({
-    url: TURSO_DATABASE_URL,
-    authToken: TURSO_AUTH_TOKEN,
-  });
-
-  // Auto-initialize Turso database asynchronously
-  initializeDatabase().catch((error) => {
-    console.error('Error auto-initializing Turso database:', error);
-  });
-} else {
-  const sqlite3 = sqlite3Init.verbose();
-  
-  // Detect Vercel deployment environment
-  const isVercel = !!process.env.VERCEL;
-  let dbPath = path.resolve(process.cwd(), process.env.DB_PATH || 'backend/tshirt_shop.sqlite');
-
-  if (isVercel) {
-    const vercelDbPath = '/tmp/tshirt_shop.sqlite';
-    console.log('Detected Vercel environment. Checking /tmp/tshirt_shop.sqlite...');
-    try {
-      if (!fs.existsSync(vercelDbPath)) {
-        if (fs.existsSync(dbPath)) {
-          fs.copyFileSync(dbPath, vercelDbPath);
-          console.log('Successfully copied SQLite database to /tmp/tshirt_shop.sqlite');
-        } else {
-          console.log('Source database not found at:', dbPath);
-        }
-      } else {
-        console.log('Database already exists at /tmp/tshirt_shop.sqlite');
-      }
-      dbPath = vercelDbPath;
-    } catch (err) {
-      console.error('Failed to copy database to /tmp:', err);
-    }
-  }
-
-  console.log('Connecting to local SQLite database at:', dbPath);
-
-  // Ensure the directory for the SQLite file exists
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
-
-  db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      console.error('Error opening SQLite database:', err.message);
-    } else {
-      console.log('Connected to SQLite database successfully.');
-      initializeDatabase().catch((error) => {
-        console.error('Error auto-initializing database:', error);
-      });
-    }
-  });
-}
+console.log('Connecting to Turso Cloud SQLite database at:', TURSO_DATABASE_URL);
+initializeDatabase().catch((error) => {
+  console.error('Error auto-initializing Turso database:', error);
+});
