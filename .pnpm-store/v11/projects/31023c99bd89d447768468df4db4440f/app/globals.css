@@ -249,3 +249,29 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.25);
 }
+
+/* Dify MOUSEEE assistant */
+#dify-chatbot-bubble-button {
+  background-color: #ff5a36 !important;
+}
+
+#dify-chatbot-bubble-window {
+  position: fixed !important;
+  top: auto !important;
+  right: 1rem !important;
+  bottom: 1rem !important;
+  left: auto !important;
+  width: 24rem !important;
+  height: 40rem !important;
+  max-height: calc(100dvh - 2rem) !important;
+}
+
+@media (max-width: 640px) {
+  #dify-chatbot-bubble-window {
+    right: 0.5rem !important;
+    bottom: 0.5rem !important;
+    width: calc(100vw - 1rem) !important;
+    height: calc(100dvh - 5rem) !important;
+    max-height: calc(100dvh - 1rem) !important;
+  }
+}

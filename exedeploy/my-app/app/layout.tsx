@@ -8,6 +8,23 @@ import CartDrawer from "../components/custom/CartDrawer";
 import ProductDetailModal from "../components/custom/ProductDetailModal";
 import MissionTracker from "../components/daily/MissionTracker";
 
+const DIFY_CHATBOT_TOKEN = "zgQHn068au6wPXDc";
+
+const difyChatbotConfig = {
+  token: DIFY_CHATBOT_TOKEN,
+  inputs: {},
+  systemVariables:
+    process.env.NODE_ENV === "development"
+      ? { user_id: `mouseeedev${process.pid}` }
+      : {},
+  userVariables: {},
+};
+
+const serializedDifyChatbotConfig = JSON.stringify(difyChatbotConfig).replace(
+  /</g,
+  "\\u003c",
+);
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -34,6 +51,16 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
           rel="stylesheet"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.difyChatbotConfig = ${serializedDifyChatbotConfig};`,
+          }}
+        />
+        <script
+          id={DIFY_CHATBOT_TOKEN}
+          src="https://udify.app/embed.min.js"
+          defer
         />
       </head>
       <body className="min-h-full flex flex-col">
