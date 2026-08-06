@@ -6,19 +6,53 @@ interface RunResult {
   changes: number;
 }
 
-const TURSO_DATABASE_URL = process.env.TURSO_DATABASE_URL || 'libsql://1-binh123456789.aws-eu-west-1.turso.io';
-const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJleHAiOjE3ODYwMTI2MzQsImlhdCI6MTc4MDgyODYzNCwiaWQiOiIwMTllYTFhMC0wODAxLTc1NGYtOGZjNi0wZTZiM2FmNDlhOTIiLCJyaWQiOiI1YzM4ZGU4Yy1hZmIwLTRhMTEtOTg4ZS05OTM0MTk1NDMyZmQifQ.e_rmJU_79n9D291a0i9XI7GuNIvghtSd3JVKui7T2Y760dq5zPe3XQztIZ4KF6yOOT6bCdFi1yM981pgCQJyDA';
+const TURSO_DATABASE_URL = process.env.TURSO_DATABASE_URL || 'libsql://mouseee-binh123456.aws-ap-northeast-1.turso.io';
+const TURSO_AUTH_TOKEN = process.env.TURSO_AUTH_TOKEN || 'eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJleHAiOjE3OTEyMjgxOTAsImlhdCI6MTc4NjA0NDE5MSwiaWQiOiIwMTlmZDg3ZS04ODAxLTc2ZGQtYjE3YS0yZjJhYzRiZTdhYTYiLCJraWQiOiJrbnVqTUtyMGNGaG94bEtYWmpXNEpIN19hdndSOHRlWW13UGJ3VHpDZEJjIiwicmlkIjoiNTc2NTIzNmYtZTE4Ny00OWVkLTgzZjAtMWFjN2Q0YTA5ZjcxIn0.ptvEfvD80WZkY2gIiUoO2CannxJIdytUvTseGZNPA_LmjTP0HdIv_tGQubxNUP1jiZ_ogyGGydKD3lpZtoiRDA';
+const LOCAL_DB_URL = 'file:./backend/tshirt_shop.sqlite';
 const SCHEMA_VERSION = '2026-07-14-daily-v1';
 
-const libsqlClient = createClient({
+let activeClient = createClient({
   url: TURSO_DATABASE_URL,
   authToken: TURSO_AUTH_TOKEN,
 });
+let isUsingFallback = false;
+
+function switchToLocalFallback(err: any) {
+  if (!isUsingFallback) {
+    console.warn('Turso Cloud auth failed (401). Switching to local SQLite database:', LOCAL_DB_URL);
+    isUsingFallback = true;
+    activeClient = createClient({ url: LOCAL_DB_URL });
+  }
+}
+
+async function executeSql(stmt: { sql: string; args: any[] }) {
+  try {
+    return await activeClient.execute(stmt);
+  } catch (err: any) {
+    if (!isUsingFallback && (err?.status === 401 || err?.code === 'SERVER_ERROR' || String(err?.cause).includes('401') || String(err).includes('401'))) {
+      switchToLocalFallback(err);
+      return await activeClient.execute(stmt);
+    }
+    throw err;
+  }
+}
+
+async function executeMultipleSql(sql: string) {
+  try {
+    return await activeClient.executeMultiple(sql);
+  } catch (err: any) {
+    if (!isUsingFallback && (err?.status === 401 || err?.code === 'SERVER_ERROR' || String(err?.cause).includes('401') || String(err).includes('401'))) {
+      switchToLocalFallback(err);
+      return await activeClient.executeMultiple(sql);
+    }
+    throw err;
+  }
+}
 
 export const query = {
   async run(sql: string, params: any[] = []): Promise<RunResult> {
     await initializeDatabase();
-    const res = await libsqlClient.execute({ sql, args: params });
+    const res = await executeSql({ sql, args: params });
     return {
       id: res.lastInsertRowid !== undefined ? Number(res.lastInsertRowid) : 0,
       changes: res.rowsAffected
@@ -26,18 +60,18 @@ export const query = {
   },
   async get<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
     await initializeDatabase();
-    const res = await libsqlClient.execute({ sql, args: params });
+    const res = await executeSql({ sql, args: params });
     if (res.rows.length === 0) return undefined;
     return res.rows[0] as unknown as T;
   },
   async all<T = any>(sql: string, params: any[] = []): Promise<T[]> {
     await initializeDatabase();
-    const res = await libsqlClient.execute({ sql, args: params });
+    const res = await executeSql({ sql, args: params });
     return res.rows as unknown as T[];
   },
   async exec(sql: string): Promise<void> {
     await initializeDatabase();
-    await libsqlClient.executeMultiple(sql);
+    await executeMultipleSql(sql);
   }
 };
 
@@ -66,7 +100,7 @@ async function runDatabaseInitialization() {
     // Turso persists between deployments. A single version lookup avoids
     // replaying every CREATE/ALTER/seed query on each server cold start.
     try {
-      const version = await libsqlClient.execute({
+      const version = await executeSql({
         sql: "SELECT value FROM app_metadata WHERE key = 'schema_version'",
         args: [],
       });

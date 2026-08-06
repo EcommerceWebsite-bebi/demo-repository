@@ -39,11 +39,13 @@ export default function CanvasWorkspace({
     });
 
     fabricCanvasRef.current = fCanvas;
+    let destroyed = false;
 
     // Load background image
     fabric.Image.fromURL(
       bgImagePath,
       (img) => {
+        if (destroyed) return;
         fCanvas.setHeight(CANVAS_HEIGHT);
         fCanvas.setDimensions({
           width: CANVAS_WIDTH * zoom,
@@ -64,11 +66,13 @@ export default function CanvasWorkspace({
           hoverCursor: 'default'
         });
 
-        fCanvas.setBackgroundImage(img, fCanvas.renderAll.bind(fCanvas));
-        bgImageRef.current = img;
-
-        // Callback to parent with initialized canvas and background object
-        onCanvasInit(fCanvas, img);
+        fCanvas.setBackgroundImage(img, () => {
+          if (destroyed) return;
+          bgImageRef.current = img;
+          fCanvas.renderAll();
+          // Callback to parent with initialized canvas and background object
+          onCanvasInit(fCanvas, img);
+        });
       },
       { crossOrigin: 'anonymous' }
     );
@@ -95,6 +99,7 @@ export default function CanvasWorkspace({
 
     // Cleanup on unmount
     return () => {
+      destroyed = true;
       fCanvas.dispose();
       fabricCanvasRef.current = null;
     };
@@ -105,9 +110,12 @@ export default function CanvasWorkspace({
     const fCanvas = fabricCanvasRef.current;
     if (!fCanvas || !bgImagePath) return;
 
+    let cancelled = false;
+
     fabric.Image.fromURL(
       bgImagePath,
       (img) => {
+        if (cancelled) return;
         const scaleX = CANVAS_WIDTH / img.width!;
         const scaleY = CANVAS_HEIGHT / img.height!;
         img.set({
@@ -123,12 +131,17 @@ export default function CanvasWorkspace({
         });
 
         fCanvas.setBackgroundImage(img, () => {
+          if (cancelled) return;
           bgImageRef.current = img;
           fCanvas.renderAll();
         });
       },
       { crossOrigin: 'anonymous' }
     );
+
+    return () => {
+      cancelled = true;
+    };
   }, [bgImagePath]);
 
   // Sync zoom level physical canvas sizes
